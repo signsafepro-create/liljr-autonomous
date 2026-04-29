@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# LILJR CONTROL v6.1 — Persistent State, All Features
+# LILJR CONTROL v6.2 — Honest State, Real Checks
 # Run: bash ~/lj <command> [args]
 # ═══════════════════════════════════════════════════════════════
 
@@ -10,19 +10,73 @@ shift 2>/dev/null || true
 
 case "$CMD" in
   start)
-    cd ~/liljr-autonomous/backend 2>/dev/null
+    cd ~/liljr-autonomous/backend 2>/dev/null || {
+        echo "❌ Backend directory not found. Run: bash ~/lj install"
+        exit 1
+    }
     nohup python server_v6.py > ~/liljr.log 2>&1 &
     sleep 2
-    curl -s "$BASE/api/health" && echo "" || echo "⚠️ Starting..."
+    HEALTH=$(curl -s "$BASE/api/health" 2>/dev/null)
+    if [ -n "$HEALTH" ]; then
+        echo "$HEALTH"
+    else
+        echo "⚠️ Server starting (check: bash ~/lj log)"
+    fi
     ;;
   stop)
     pkill -9 -f "server_v6" && echo "Stopped" || echo "Not running"
     ;;
   status)
-    curl -s "$BASE/api/health" || echo "Not running"
+    HEALTH=$(curl -s "$BASE/api/health" 2>/dev/null)
+    if [ -n "$HEALTH" ]; then
+        echo "$HEALTH"
+    else
+        echo "Not running"
+    fi
     ;;
   install)
-    pip install flask flask-cors requests 2>&1 | tail -3 && echo "Done"
+    # Clone repo if missing
+    if [ ! -d "$HOME/liljr-autonomous" ]; then
+        echo "📦 Cloning repo..."
+        cd ~ && git clone https://github.com/signsafepro-create/liljr-autonomous.git
+    fi
+    pip install flask flask-cors requests 2>&1 | tail -3
+    echo "Done"
+    ;;
+  # ─── STATE ───
+  state)
+    if [ -f "$HOME/liljr_state.json" ]; then
+        cat "$HOME/liljr_state.json"
+    else
+        echo "No state file"
+        echo ""
+        echo "Start server: bash ~/lj start"
+        echo "Or init blank: bash ~/lj state-init"
+    fi
+    ;;
+  state-init)
+    cat > "$HOME/liljr_state.json" << 'EOF'
+{
+  "version": "6.2",
+  "created_at": "",
+  "watchlist": [],
+  "rules": [],
+  "portfolio": {"cash": 10000.0, "positions": []},
+  "trades": [],
+  "notes": "Initial state"
+}
+EOF
+    # Fill in current timestamp
+    python3 -c "
+import json, datetime
+with open('$HOME/liljr_state.json', 'r') as f:
+    d = json.load(f)
+d['created_at'] = datetime.datetime.now().isoformat()
+with open('$HOME/liljr_state.json', 'w') as f:
+    json.dump(d, f, indent=2)
+" 2>/dev/null || sed -i "s/\"created_at\": \"\"/\"created_at\": \"$(date -Iseconds)\"/" "$HOME/liljr_state.json"
+    echo "✅ Blank state created at $HOME/liljr_state.json"
+    echo "Start server: bash ~/lj start"
     ;;
   # ─── PHONE ───
   text|sms)
@@ -104,27 +158,34 @@ case "$CMD" in
   analyze)
     curl -s -X POST "$BASE/api/ai/analyze" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\"}" && echo ""
     ;;
-  # ─── STATE ───
-  state)
-    cat ~/liljr_state.json 2>/dev/null || echo "No state file"
-    ;;
+  # ─── PUSH ───
   push)
-    bash ~/lj stop
-    cd ~ && curl -s https://raw.githubusercontent.com/signsafepro-create/liljr-autonomous/main/scripts/push_all.sh > push_all.sh && bash push_all.sh
+    bash ~/lj stop 2>/dev/null || true
+    cd ~ && bash ~/liljr-autonomous/scripts/push_all.sh
+    ;;
+  # ─── FIX REMOTE (if token breaks) ───
+  fix-remote)
+    read -p "Paste GitHub token (starts with ghp_): " TOKEN
+    git -C ~/liljr-autonomous remote set-url origin "https://${TOKEN}@github.com/signsafepro-create/liljr-autonomous.git"
+    echo "Remote updated. Test: git -C ~/liljr-autonomous push origin main"
     ;;
   # ─── UTILS ───
   log)
     tail -20 ~/liljr.log 2>/dev/null || echo "No log"
     ;;
   *)
-    echo "LilJR v6.1 — bash ~/lj <command> [args]"
+    echo "LilJR v6.2 — bash ~/lj <command> [args]"
     echo ""
     echo "SERVER:"
     echo "  bash ~/lj start              — Start server"
     echo "  bash ~/lj stop               — Stop server"
     echo "  bash ~/lj status             — Check status"
-    echo "  bash ~/lj install            — Install deps"
-    echo "  bash ~/lj push               — Push all to GitHub"
+    echo "  bash ~/lj install            — Clone repo + install deps"
+    echo "  bash ~/lj push               — Push state + code to GitHub"
+    echo ""
+    echo "STATE:"
+    echo "  bash ~/lj state              — Show saved state"
+    echo "  bash ~/lj state-init         — Create blank state file"
     echo ""
     echo "PHONE:"
     echo "  bash ~/lj text +1555123 hi   — Send SMS"
@@ -146,7 +207,7 @@ case "$CMD" in
     echo "  bash ~/lj history            — Trade history"
     echo ""
     echo "WATCHLIST:"
-    echo "  bash ~/lj watch AAPL 170     — Watch AAPL, alert at <= $170"
+    echo "  bash ~/lj watch AAPL 170     — Watch AAPL, alert at <= \$170"
     echo "  bash ~/lj unwatch AAPL       — Remove from watchlist"
     echo "  bash ~/lj watches            — List watchlist"
     echo "  bash ~/lj check              — Check all alerts"
@@ -162,8 +223,8 @@ case "$CMD" in
     echo "  bash ~/lj ai What should I trade?      — Ask AI"
     echo "  bash ~/lj analyze NVDA         — AI stock analysis"
     echo ""
-    echo "STATE:"
-    echo "  bash ~/lj state                — Show saved state"
+    echo "UTILS:"
     echo "  bash ~/lj log                  — Server log"
+    echo "  bash ~/lj fix-remote           — Fix GitHub token"
     ;;
 esac
