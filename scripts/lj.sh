@@ -14,7 +14,10 @@ case "$CMD" in
         echo "❌ Backend directory not found. Run: bash ~/lj install"
         exit 1
     }
-    nohup python server_v6.py > ~/liljr.log 2>&1 &
+    # Use v6.2 if available, fallback to v6
+    SERVER="server_v6.2.py"
+    [ ! -f "$SERVER" ] && SERVER="server_v6.py"
+    nohup python "$SERVER" > ~/liljr.log 2>&1 &
     sleep 2
     HEALTH=$(curl -s "$BASE/api/health" 2>/dev/null)
     if [ -n "$HEALTH" ]; then
@@ -163,6 +166,27 @@ with open('$HOME/liljr_state.json', 'w') as f:
     bash ~/lj stop 2>/dev/null || true
     cd ~ && bash ~/liljr-autonomous/scripts/push_all.sh
     ;;
+  # ─── WATCHDOG ───
+  watchdog)
+    nohup bash ~/liljr-autonomous/scripts/watchdog.sh > /dev/null 2>&1 &
+    echo "👁 Watchdog started (auto-restarts server if it dies)"
+    echo "Check: ps | grep watchdog"
+    ;;
+  # ─── RESTORE ───
+  restore)
+    bash ~/liljr-autonomous/scripts/restore.sh
+    ;;
+  # ─── TELEGRAM SETUP ───
+  tg-setup)
+    read -p "Telegram Bot Token (from @BotFather): " TOKEN
+    read -p "Your Telegram Chat ID: " CHATID
+    echo "export TELEGRAM_BOT_TOKEN='$TOKEN'" >> ~/.bashrc
+    echo "export TELEGRAM_CHAT_ID='$CHATID'" >> ~/.bashrc
+    export TELEGRAM_BOT_TOKEN="$TOKEN"
+    export TELEGRAM_CHAT_ID="$CHATID"
+    echo "✅ Telegram configured. Restart server to activate."
+    echo "Test: bash ~/lj stop && bash ~/lj start"
+    ;;
   # ─── FIX REMOTE (if token breaks) ───
   fix-remote)
     read -p "Paste GitHub token (starts with ghp_): " TOKEN
@@ -182,6 +206,8 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj status             — Check status"
     echo "  bash ~/lj install            — Clone repo + install deps"
     echo "  bash ~/lj push               — Push state + code to GitHub"
+    echo "  bash ~/lj watchdog           — Start auto-restart watchdog"
+    echo "  bash ~/lj restore            — Disaster recovery (rebuild everything)"
     echo ""
     echo "STATE:"
     echo "  bash ~/lj state              — Show saved state"
@@ -226,5 +252,8 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "UTILS:"
     echo "  bash ~/lj log                  — Server log"
     echo "  bash ~/lj fix-remote           — Fix GitHub token"
+    echo "  bash ~/lj tg-setup             — Setup Telegram bot"
+    echo "  bash ~/lj watchdog             — Auto-restart watchdog"
+    echo "  bash ~/lj restore              — Disaster recovery"
     ;;
 esac
