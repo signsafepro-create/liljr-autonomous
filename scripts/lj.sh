@@ -113,9 +113,15 @@ with open('$HOME/liljr_state.json', 'w') as f:
   clip)
     curl -s "$BASE/api/social/clipboard" && echo ""
     ;;
-  # ─── TRADING ───
+  # ═══════════════════════════════════════════════════════════════
+  # COMMAND CENTER — Talk to it, it does everything
+  # ═══════════════════════════════════════════════════════════════
+  cc)
+    python3 ~/liljr-autonomous/command_center.py "$@"
+    ;;
+  # ─── SHORTCUTS ───
   buy)
-    curl -s -X POST "$BASE/api/trading/buy" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo ""
+    python3 ~/liljr-autonomous/command_center.py "buy $1 ${2:-1}"
     ;;
   sell)
     curl -s -X POST "$BASE/api/trading/sell" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo ""
