@@ -1,11 +1,31 @@
 {
-  "timestamp": "2026-04-29 19:10:53.088271",
+  "timestamp": "2026-04-29 19:43:36.976982",
   "watchlist": [],
-  "auto_rules": [],
+  "auto_rules": [
+    {
+      "id": 1,
+      "symbol": "AAPL",
+      "condition": "below",
+      "target_price": 150,
+      "action": "buy",
+      "qty": 5,
+      "active": true
+    },
+    {
+      "id": 2,
+      "symbol": "TSLA",
+      "condition": "above",
+      "target_price": 300,
+      "action": "sell",
+      "qty": 3,
+      "active": true
+    }
+  ],
   "alerts": [],
   "trade_history": [],
   "portfolio": {
     "cash": 10000.0,
     "positions": []
-  }
+  },
+  "agent_tasks": []
 }
