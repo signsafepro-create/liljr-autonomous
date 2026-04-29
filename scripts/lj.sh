@@ -11,13 +11,13 @@ shift 2>/dev/null || true
 case "$CMD" in
   start)
     cd ~/liljr-autonomous/backend 2>/dev/null || cd ~/liljr/liljr-autonomous/backend 2>/dev/null
-    if [ ! -f "server.py" ]; then
-      echo "❌ server.py not found. Cloning repo..."
+    if [ ! -f "server_termux.py" ]; then
+      echo "❌ Repo missing. Cloning..."
       cd ~ && rm -rf liljr-autonomous && git clone https://github.com/signsafepro-create/liljr-autonomous.git
       cd ~/liljr-autonomous/backend
-      pip install fastapi uvicorn requests python-dotenv 2>&1 | tail -3
+      pip install flask flask-cors requests 2>&1 | tail -3
     fi
-    nohup python server.py > ~/liljr.log 2>&1 &
+    nohup python server_termux.py > ~/liljr.log 2>&1 &
     sleep 2
     curl -s "$BASE/api/health" && echo "" || echo "⚠️ Server starting... run: bash ~/lj log"
     ;;
@@ -88,13 +88,13 @@ case "$CMD" in
     tail -20 ~/liljr.log 2>/dev/null || echo "No log yet"
     ;;
   setup)
-    echo "Setting up LilJR (Pure Python, no Rust)..."
+    echo "🚀 LilJR Bulletproof Setup..."
     cd ~
     rm -rf liljr-autonomous
     git clone https://github.com/signsafepro-create/liljr-autonomous.git
     cd liljr-autonomous/backend
-    # PURE PYTHON — no Rust compilation needed
-    pip install fastapi==0.95.2 uvicorn==0.22.0 requests python-dotenv starlette==0.27.0 pydantic==1.10.13 --no-deps 2>&1 | tail -5
+    # Install ONLY Flask (no FastAPI, no Pydantic, no Rust)
+    pip install flask flask-cors requests 2>&1 | tail -5
     echo "✅ Setup done. Run: bash ~/lj start"
     ;;
   *)
