@@ -88,12 +88,13 @@ case "$CMD" in
     tail -20 ~/liljr.log 2>/dev/null || echo "No log yet"
     ;;
   setup)
-    echo "Setting up LilJR..."
+    echo "Setting up LilJR (Pure Python, no Rust)..."
     cd ~
     rm -rf liljr-autonomous
     git clone https://github.com/signsafepro-create/liljr-autonomous.git
     cd liljr-autonomous/backend
-    pip install fastapi uvicorn requests python-dotenv 2>&1 | tail -3
+    # PURE PYTHON — no Rust compilation needed
+    pip install fastapi==0.95.2 uvicorn==0.22.0 requests python-dotenv starlette==0.27.0 pydantic==1.10.13 --no-deps 2>&1 | tail -5
     echo "✅ Setup done. Run: bash ~/lj start"
     ;;
   *)
