@@ -14,8 +14,9 @@ case "$CMD" in
         echo "❌ Backend directory not found. Run: bash ~/lj install"
         exit 1
     }
-    # Use v6.2 if available, fallback to v6
-    SERVER="server_v6.2.py"
+    # Use v6.3 if available, fallback to v6.2, then v6
+    SERVER="server_v6.3.py"
+    [ ! -f "$SERVER" ] && SERVER="server_v6.2.py"
     [ ! -f "$SERVER" ] && SERVER="server_v6.py"
     nohup python "$SERVER" > ~/liljr.log 2>&1 &
     sleep 2
@@ -161,6 +162,22 @@ with open('$HOME/liljr_state.json', 'w') as f:
   analyze)
     curl -s -X POST "$BASE/api/ai/analyze" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\"}" && echo ""
     ;;
+  # ─── SELF-HEAL ───
+  heal)
+    curl -s -X POST "$BASE/api/self_heal" && echo ""
+    ;;
+  # ─── SENTIMENT ───
+  sentiment)
+    curl -s "$BASE/api/sentiment/$1" && echo ""
+    ;;
+  # ─── VOICE ───
+  voice)
+    curl -s -X POST "$BASE/api/voice" && echo ""
+    ;;
+  # ─── AGENT TASK ───
+  agent)
+    curl -s -X POST "$BASE/api/agent/task" -H "Content-Type: application/json" -d "{\"type\":\"$1\",\"payload\":$2}" && echo ""
+    ;;
   # ─── PUSH ───
   push)
     bash ~/lj stop 2>/dev/null || true
@@ -203,11 +220,12 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "SERVER:"
     echo "  bash ~/lj start              — Start server"
     echo "  bash ~/lj stop               — Stop server"
-    echo "  bash ~/lj status             — Check status"
+    echo "  bash ~/lj status             — Check status + battery + context"
     echo "  bash ~/lj install            — Clone repo + install deps"
     echo "  bash ~/lj push               — Push state + code to GitHub"
     echo "  bash ~/lj watchdog           — Start auto-restart watchdog"
     echo "  bash ~/lj restore            — Disaster recovery (rebuild everything)"
+    echo "  bash ~/lj heal               — Self-heal: pull latest code from GitHub"
     echo ""
     echo "STATE:"
     echo "  bash ~/lj state              — Show saved state"
@@ -245,9 +263,12 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj run                — Execute triggered rules"
     echo "  bash ~/lj delrule 1          — Delete rule #1"
     echo ""
-    echo "AI:"
+    echo "SENTIMENT + AI:"
+    echo "  bash ~/lj sentiment AAPL     — Reddit sentiment analysis"
     echo "  bash ~/lj ai What should I trade?      — Ask AI"
     echo "  bash ~/lj analyze NVDA         — AI stock analysis"
+    echo "  bash ~/lj voice              — Voice command (phone mic)"
+    echo "  bash ~/lj agent trade '{\"symbol\":\"AAPL\",\"qty\":5}'  — Agent task"
     echo ""
     echo "UTILS:"
     echo "  bash ~/lj log                  — Server log"

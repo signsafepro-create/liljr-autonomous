@@ -18,9 +18,12 @@ while true; do
         pkill -9 -f "server_v6" 2>/dev/null || true
         sleep 2
         
-        # Start server
+        # Start server (use v6.3 if available, fallback to v6.2, then v6)
         cd "$REPO/backend" 2>/dev/null || cd "$REPO" 2>/dev/null
-        nohup python3 server_v6.2.py > "$HOME/liljr.log" 2>&1 &
+        SERVER="server_v6.3.py"
+        [ ! -f "$SERVER" ] && SERVER="server_v6.2.py"
+        [ ! -f "$SERVER" ] && SERVER="server_v6.py"
+        nohup python3 "$SERVER" > "$HOME/liljr.log" 2>&1 &
         
         echo "[$(date)] Server restarted (PID: $!)" >> "$LOG"
         
