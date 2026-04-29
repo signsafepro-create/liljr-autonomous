@@ -187,6 +187,10 @@ with open('$HOME/liljr_state.json', 'w') as f:
   voice)
     curl -s -X POST "$BASE/api/voice" && echo ""
     ;;
+  # ─── MEMORY ENGINE ───
+  memory)
+    python3 ~/liljr-autonomous/memory_engine.py "${1:-query}" "${2:-$*}"
+    ;;
   # ─── AGENT TASK ───
   agent)
     curl -s -X POST "$BASE/api/agent/task" -H "Content-Type: application/json" -d "{\"type\":\"$1\",\"payload\":$2}" && echo ""
@@ -282,6 +286,12 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj analyze NVDA         — AI stock analysis"
     echo "  bash ~/lj voice              — Voice command (phone mic)"
     echo "  bash ~/lj agent trade '{\"symbol\":\"AAPL\",\"qty\":5}'  — Agent task"
+    echo ""
+    echo "MEMORY ENGINE:"
+    echo "  bash ~/lj memory 'what was my last trade'   — Query memory"
+    echo "  bash ~/lj memory analyze         — Deep pattern analysis"
+    echo "  bash ~/lj memory stats           — Memory statistics"
+    echo "  bash ~/lj memory suggest         — Get suggestions"
     echo ""
     echo "WEB BUILDER:"
     echo "  bash ~/lj build landing page for my app  — Build landing page"

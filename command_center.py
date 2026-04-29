@@ -189,6 +189,7 @@ class CommandParser:
             r'\b(build|make|create)\b.*\b(landing|page|site|web|app|dashboard)\b': 'build',
             r'\b(deploy|ship|publish)\b.*\b(web|site|app|landing)\b': 'deploy_web',
             r'\b(help|commands|what can you do)\b': 'help',
+            r'\b(memory|remember|recall|what.*know|what.*did|history of|log of)\b': 'memory',
         }
     
     def parse(self, text):
@@ -340,6 +341,8 @@ class Executor:
             'deploy': self._handle_deploy,
             'build': self._handle_build,
             'deploy_web': self._handle_deploy_web,
+            'memory': self._handle_memory,
+            'query': self._handle_memory,
             'help': self._handle_help,
         }
         
@@ -528,6 +531,30 @@ class Executor:
         time.sleep(2)
         return self._handle_start(args)
     
+    def _handle_memory(self, args):
+        """Query the memory engine."""
+        action = 'query'
+        if args:
+            text = ' '.join(args).lower()
+            if 'analyze' in text or 'pattern' in text:
+                action = 'analyze'
+            elif 'stats' in text or 'status' in text:
+                action = 'stats'
+            elif 'suggest' in text:
+                action = 'suggest'
+        
+        os.chdir(REPO_DIR)
+        r = subprocess.run(
+            ['python3', 'memory_engine.py', action] + (args if args else []),
+            capture_output=True, text=True, timeout=30
+        )
+        return {
+            "status": "memory_result",
+            "action": action,
+            "output": r.stdout,
+            "stderr": r.stderr if r.stderr else None
+        }
+    
     def _handle_help(self, args):
         return {
             "commands": [
@@ -536,7 +563,9 @@ class Executor:
                 "rule SYMBOL below/above PRICE buy/sell [QTY]", "rules", "check",
                 "push", "pull", "status", "start", "stop", "heal",
                 "state", "log", "ai MESSAGE", "analyze SYMBOL",
-                "sentiment SYMBOL", "voice", "deploy", "help"
+                "sentiment SYMBOL", "voice", "deploy", "build", "deploy-web",
+                "memory query", "memory analyze", "memory stats", "memory suggest",
+                "help"
             ]
         }
     
