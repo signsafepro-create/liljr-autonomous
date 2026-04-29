@@ -15,6 +15,7 @@ from browser_agent import browser
 from trading_engine import trader
 from risk_manager import risk
 from auto_worker import worker
+from social_connector import social
 
 app = FastAPI(title="LilJR Autonomous Control", version="4.0.0")
 
@@ -39,7 +40,8 @@ def status():
         "phone": {"api_available": phone.termux_api, "apps": len(phone.installed_apps)},
         "trading": {"configured": trader.is_configured(), "watchlist": trader.watchlist},
         "risk": risk.get_status(),
-        "worker": worker.get_status()
+        "worker": worker.get_status(),
+        "social": {"termux_api": social.termux_api, "telegram_configured": bool(social.telegram_token)}
     }
 
 # ═══════════════════════════════════════════════════════════════
@@ -274,6 +276,122 @@ def worker_logs():
     return {"logs": worker.get_logs(50)}
 
 # ═══════════════════════════════════════════════════════════════
+# SOCIAL CONNECTOR — Text, WhatsApp, Telegram, Notifications
+# ═══════════════════════════════════════════════════════════════
+
+@app.post("/api/social/sms/send")
+async def social_sms_send(request: Request):
+    data = await request.json()
+    return social.send_sms(data.get("number", ""), data.get("message", ""))
+
+@app.get("/api/social/sms/read")
+def social_sms_read(limit: int = 20):
+    return {"messages": social.read_sms(limit)}
+
+@app.get("/api/social/sms/conversation/{number}")
+def social_sms_conversation(number: str, limit: int = 50):
+    return {"messages": social.read_sms_conversation(number, limit)}
+
+@app.post("/api/social/whatsapp/send")
+async def social_whatsapp_send(request: Request):
+    data = await request.json()
+    return social.whatsapp_send(data.get("number", ""), data.get("message", ""))
+
+@app.post("/api/social/whatsapp/open")
+async def social_whatsapp_open(request: Request):
+    data = await request.json()
+    return social.whatsapp_open_chat(data.get("number", ""))
+
+@app.post("/api/social/telegram/send")
+async def social_telegram_send(request: Request):
+    data = await request.json()
+    return social.telegram_send(data.get("message", ""), data.get("chat_id"))
+
+@app.get("/api/social/telegram/updates")
+def social_telegram_updates(limit: int = 10):
+    return {"updates": social.telegram_get_updates(limit)}
+
+@app.post("/api/social/telegram/reply")
+async def social_telegram_reply(request: Request):
+    data = await request.json()
+    return social.telegram_reply(data.get("message", ""), data.get("reply_to"), data.get("chat_id"))
+
+@app.get("/api/social/notifications")
+def social_notifications():
+    return {"notifications": social.read_notifications()}
+
+@app.post("/api/social/notification/reply")
+async def social_notification_reply(request: Request):
+    data = await request.json()
+    return social.reply_to_notification(data.get("id", ""), data.get("reply", ""))
+
+@app.post("/api/social/share")
+async def social_share(request: Request):
+    data = await request.json()
+    return social.share_text(data.get("text", ""), data.get("subject", ""), data.get("app"))
+
+@app.post("/api/social/share/app")
+async def social_share_app(request: Request):
+    data = await request.json()
+    return social.share_to_app(data.get("text", ""), data.get("app", ""))
+
+@app.post("/api/social/post")
+async def social_post(request: Request):
+    data = await request.json()
+    return social.post_to_social(data.get("text", ""), data.get("platform", ""))
+
+@app.post("/api/social/open_app")
+async def social_open_app(request: Request):
+    data = await request.json()
+    return social.open_app(data.get("package", ""))
+
+@app.post("/api/social/open_url")
+async def social_open_url(request: Request):
+    data = await request.json()
+    return social.open_url_in_app(data.get("url", ""), data.get("app"))
+
+@app.get("/api/social/clipboard")
+def social_clipboard_get():
+    return social.clipboard_get()
+
+@app.post("/api/social/clipboard")
+async def social_clipboard_set(request: Request):
+    data = await request.json()
+    return social.clipboard_set(data.get("text", ""))
+
+@app.get("/api/social/contacts")
+def social_contacts():
+    return {"contacts": social.get_contacts()}
+
+@app.get("/api/social/contacts/search")
+def social_contacts_search(name: str):
+    return {"contacts": social.find_contact(name)}
+
+@app.get("/api/social/calls")
+def social_calls(limit: int = 50):
+    return {"calls": social.get_call_log(limit)}
+
+@app.post("/api/social/email")
+async def social_email(request: Request):
+    data = await request.json()
+    return social.email_send(data.get("to", ""), data.get("subject", ""), data.get("body", ""))
+
+@app.post("/api/social/mass_text")
+async def social_mass_text(request: Request):
+    data = await request.json()
+    return social.mass_text(data.get("numbers", []), data.get("message", ""))
+
+@app.post("/api/social/auto_reply")
+async def social_auto_reply(request: Request):
+    data = await request.json()
+    return social.auto_reply_sms(data.get("keyword", ""), data.get("reply", ""))
+
+@app.post("/api/social/broadcast")
+async def social_broadcast(request: Request):
+    data = await request.json()
+    return social.broadcast(data.get("message", ""), data.get("channels", []))
+
+# ═══════════════════════════════════════════════════════════════
 # WEBSOCKET — Live Data Feed
 # ═══════════════════════════════════════════════════════════════
 
@@ -334,5 +452,6 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     print(f"🤖 LilJR Autonomous Control v4.0 on port {port}")
     print(f"📱 Phone control: {phone.termux_api}")
+    print(f"💬 Social connector: SMS, WhatsApp, Telegram, notifications")
     print(f"💰 Trading: {'LIVE' if trader.is_configured() else 'MOCK (set ALPACA_API_KEY)'}")
     uvicorn.run(app, host="0.0.0.0", port=port)
