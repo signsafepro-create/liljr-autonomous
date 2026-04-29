@@ -120,13 +120,15 @@ def stock_price(symbol):
 @app.route('/api/trading/buy', methods=['POST'])
 def buy_stock():
     d = request.get_json() or {}
-    sym, qty = d.get('symbol', 'AAPL'), d.get('qty', 1)
+    sym = d.get('symbol', 'AAPL')
+    qty = d.get('qty') or 1
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175})
 
 @app.route('/api/trading/sell', methods=['POST'])
 def sell_stock():
     d = request.get_json() or {}
-    sym, qty = d.get('symbol', 'AAPL'), d.get('qty', 1)
+    sym = d.get('symbol', 'AAPL')
+    qty = d.get('qty') or 1
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175})
 
 @app.route('/api/trading/portfolio')
@@ -163,7 +165,7 @@ case "$CMD" in
   tap) curl -s -X POST "$BASE/api/phone/tap" -H "Content-Type: application/json" -d "{\"x\":$1,\"y\":$2}" && echo "" ;;
   launch) curl -s -X POST "$BASE/api/social/open_app" -H "Content-Type: application/json" -d "{\"package\":\"$1\"}" && echo "" ;;
   buy) curl -s -X POST "$BASE/api/trading/buy" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo "" ;;
-  sell) curl -s -X POST "$BASE/api/trading/sell" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-null}}" && echo "" ;;
+  sell) curl -s -X POST "$BASE/api/trading/sell" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo "" ;;
   price) curl -s "$BASE/api/trading/price/$1" && echo "" ;;
   portfolio) curl -s "$BASE/api/trading/portfolio" && echo "" ;;
   clip) curl -s "$BASE/api/social/clipboard" && echo "" ;;
