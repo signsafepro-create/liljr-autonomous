@@ -158,14 +158,14 @@ if FLASK_MODE:
     def buy_stock():
         data = request.get_json() or {}
         symbol = data.get('symbol', 'AAPL')
-        qty = data.get('qty', 1)
+        qty = data.get('qty', 1) or 1
         return jsonify({"status": "FILLED", "symbol": symbol.upper(), "qty": qty, "total": qty * 175})
 
     @app.route('/api/trading/sell', methods=['POST'])
     def sell_stock():
         data = request.get_json() or {}
         symbol = data.get('symbol', 'AAPL')
-        qty = data.get('qty', 1)
+        qty = data.get('qty', 1) or 1
         return jsonify({"status": "FILLED", "symbol": symbol.upper(), "qty": qty, "total": qty * 175})
 
     @app.route('/api/trading/portfolio', methods=['GET'])
