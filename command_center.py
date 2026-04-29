@@ -186,6 +186,8 @@ class CommandParser:
             r'\b(self[- ]?heal|auto[- ]?fix)\b': 'heal',
             r'\b(write|code|add|create|fix)\b.*\b(endpoint|route|api|function)\b': 'write_code',
             r'\b(deploy|ship|release)\b': 'deploy',
+            r'\b(build|make|create)\b.*\b(landing|page|site|web|app|dashboard)\b': 'build',
+            r'\b(deploy|ship|publish)\b.*\b(web|site|app|landing)\b': 'deploy_web',
             r'\b(help|commands|what can you do)\b': 'help',
         }
     
@@ -336,6 +338,8 @@ class Executor:
             'voice': self._handle_voice,
             'write_code': self._handle_write_code,
             'deploy': self._handle_deploy,
+            'build': self._handle_build,
+            'deploy_web': self._handle_deploy_web,
             'help': self._handle_help,
         }
         
@@ -481,9 +485,34 @@ class Executor:
         except Exception as e:
             return {"status": "voice_error", "error": str(e)}
     
+    def _handle_build(self, args):
+        """Build a web app."""
+        text = ' '.join(args) if args else 'landing page'
+        os.chdir(REPO_DIR)
+        r = subprocess.run(
+            ['python3', 'web_builder.py', text],
+            capture_output=True, text=True, timeout=60
+        )
+        try:
+            return json.loads(r.stdout)
+        except:
+            return {"status": "build_error", "stdout": r.stdout, "stderr": r.stderr}
+    
+    def _handle_deploy_web(self, args):
+        """Deploy web app."""
+        text = ' '.join(args) if args else 'deploy to github pages'
+        os.chdir(REPO_DIR)
+        r = subprocess.run(
+            ['python3', 'web_builder.py', text],
+            capture_output=True, text=True, timeout=120
+        )
+        try:
+            return json.loads(r.stdout)
+        except:
+            return {"status": "deploy_error", "stdout": r.stdout, "stderr": r.stderr}
+    
     def _handle_write_code(self, args):
         # This is a placeholder for the full auto-coding feature
-        # In practice, you'd need more sophisticated code generation
         return {"status": "write_code", "message": "Code writing requires human review. Use: write endpoint /api/custom def custom(): pass"}
     
     def _handle_deploy(self, args):

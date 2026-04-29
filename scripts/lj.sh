@@ -119,6 +119,13 @@ with open('$HOME/liljr_state.json', 'w') as f:
   cc)
     python3 ~/liljr-autonomous/command_center.py "$@"
     ;;
+  # ─── WEB BUILDER ───
+  build)
+    python3 ~/liljr-autonomous/command_center.py "build $*"
+    ;;
+  deploy-web)
+    python3 ~/liljr-autonomous/command_center.py "deploy web $*"
+    ;;
   # ─── SHORTCUTS ───
   buy)
     python3 ~/liljr-autonomous/command_center.py "buy $1 ${2:-1}"
@@ -275,6 +282,11 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj analyze NVDA         — AI stock analysis"
     echo "  bash ~/lj voice              — Voice command (phone mic)"
     echo "  bash ~/lj agent trade '{\"symbol\":\"AAPL\",\"qty\":5}'  — Agent task"
+    echo ""
+    echo "WEB BUILDER:"
+    echo "  bash ~/lj build landing page for my app  — Build landing page"
+    echo "  bash ~/lj build dashboard                — Build dashboard"
+    echo "  bash ~/lj deploy-web                     — Deploy to GitHub Pages"
     echo ""
     echo "UTILS:"
     echo "  bash ~/lj log                  — Server log"
