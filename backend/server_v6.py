@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-LILJR SERVER v6.0 — All Systems Integrated
-Termux phone control + Real trading (Alpaca) + AI brain (Groq) + Price alerts + Auto-trading
+LILJR SERVER v6.1 — PERSISTENT STATE
+Auto-saves everything. Reloads on boot. Never loses memory.
 """
 import os
 import sys
@@ -13,7 +13,6 @@ import time
 import threading
 from datetime import datetime
 
-# ─── Flask ───
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -22,28 +21,82 @@ CORS(app)
 PORT = int(os.environ.get('PORT', 8000))
 
 # ═══════════════════════════════════════════════════════════════
-# CONFIGURATION
+# CONFIG
 # ═══════════════════════════════════════════════════════════════
 ALPACA_API_KEY = os.environ.get('ALPACA_API_KEY', '')
 ALPACA_SECRET = os.environ.get('ALPACA_SECRET_KEY', '')
-ALPACA_BASE = 'https://paper-api.alpaca.markets'  # Paper trading by default
+ALPACA_BASE = 'https://paper-api.alpaca.markets'
 
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
+# ─── STATE FILE ───
+STATE_FILE = os.path.expanduser('~/liljr_state.json')
 
 # In-memory state
 WATCHLIST = {}
 AUTO_RULES = []
 ALERTS = []
 TRADE_HISTORY = []
+PORTFOLIO = {"cash": 10000.0, "positions": [{"symbol": "AAPL", "qty": 10, "avg_price": 170}, {"symbol": "TSLA", "qty": 5, "avg_price": 230}], "total_value": 12900.0}
 
 # ═══════════════════════════════════════════════════════════════
-# PHONE / TERMUX ENDPOINTS (v5.x stable)
+# STATE PERSISTENCE — Never Lose Memory
+# ═══════════════════════════════════════════════════════════════
+
+def save_state():
+    """Save all state to disk."""
+    state = {
+        "timestamp": str(datetime.now()),
+        "watchlist": WATCHLIST,
+        "auto_rules": AUTO_RULES,
+        "alerts": ALERTS,
+        "trade_history": TRADE_HISTORY,
+        "portfolio": PORTFOLIO
+    }
+    try:
+        with open(STATE_FILE, 'w') as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f"[SAVE ERROR] {e}")
+
+def load_state():
+    """Load state from disk on startup."""
+    global WATCHLIST, AUTO_RULES, ALERTS, TRADE_HISTORY, PORTFOLIO
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                state = json.load(f)
+            WATCHLIST = state.get('watchlist', {})
+            AUTO_RULES = state.get('auto_rules', [])
+            ALERTS = state.get('alerts', [])
+            TRADE_HISTORY = state.get('trade_history', [])
+            PORTFOLIO = state.get('portfolio', PORTFOLIO)
+            print(f"[STATE] Loaded from {STATE_FILE}")
+            print(f"[STATE] Watchlist: {len(WATCHLIST)} items, Rules: {len(AUTO_RULES)}, Trades: {len(TRADE_HISTORY)}")
+        except Exception as e:
+            print(f"[LOAD ERROR] {e}")
+    else:
+        print(f"[STATE] No state file found. Starting fresh.")
+
+# Load immediately
+load_state()
+
+# ═══════════════════════════════════════════════════════════════
+# PHONE / TERMUX
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/health')
 def health():
-    return jsonify({"status": "ok", "version": "v6.0-all-together", "mode": "full"})
+    return jsonify({
+        "status": "ok",
+        "version": "v6.1-persistent",
+        "mode": "full",
+        "state_file": STATE_FILE,
+        "watchlist_count": len(WATCHLIST),
+        "rules_count": len(AUTO_RULES),
+        "trade_count": len(TRADE_HISTORY)
+    })
 
 @app.route('/api/phone/battery')
 def battery():
@@ -52,9 +105,8 @@ def battery():
         r = subprocess.run(["termux-battery-status"], capture_output=True, text=True, timeout=5)
         if r.returncode == 0:
             return jsonify(json.loads(r.stdout))
-    except Exception:
-        pass
-    return jsonify({"percentage": 75, "status": "CHARGING", "plugged": "AC"})
+    except: pass
+    return jsonify({"percentage": 75, "status": "CHARGING"})
 
 @app.route('/api/phone/tap', methods=['POST'])
 def tap():
@@ -63,8 +115,7 @@ def tap():
     try:
         import subprocess
         subprocess.run(["input", "tap", str(x), str(y)], capture_output=True, timeout=2)
-    except Exception:
-        pass
+    except: pass
     return jsonify({"status": "ok", "x": x, "y": y})
 
 @app.route('/api/social/clipboard', methods=['GET', 'POST'])
@@ -74,15 +125,13 @@ def clipboard():
         try:
             import subprocess
             subprocess.run(["termux-clipboard-set", d.get('text', '')], capture_output=True, timeout=2)
-        except Exception:
-            pass
+        except: pass
         return jsonify({"status": "ok"})
     try:
         import subprocess
         r = subprocess.run(["termux-clipboard-get"], capture_output=True, text=True, timeout=2)
         return jsonify({"text": r.stdout.strip()})
-    except Exception:
-        return jsonify({"text": ""})
+    except: return jsonify({"text": ""})
 
 @app.route('/api/social/open_app', methods=['POST'])
 def open_app():
@@ -91,8 +140,7 @@ def open_app():
     try:
         import subprocess
         subprocess.run(["am", "start", "-n", f"{pkg}/.MainActivity"], capture_output=True, timeout=2)
-    except Exception:
-        pass
+    except: pass
     return jsonify({"status": "ok", "package": pkg})
 
 @app.route('/api/social/sms/send', methods=['POST'])
@@ -102,8 +150,7 @@ def send_sms():
     try:
         import subprocess
         subprocess.run(["termux-sms-send", "-n", n, m], capture_output=True, timeout=5)
-    except Exception:
-        pass
+    except: pass
     return jsonify({"status": "queued", "number": n})
 
 @app.route('/api/social/sms/read')
@@ -114,8 +161,7 @@ def read_sms():
         r = subprocess.run(["termux-sms-list", "-l", str(limit)], capture_output=True, text=True, timeout=5)
         if r.returncode == 0:
             return jsonify({"messages": json.loads(r.stdout)})
-    except Exception:
-        pass
+    except: pass
     return jsonify({"messages": []})
 
 @app.route('/api/social/whatsapp/send', methods=['POST'])
@@ -125,8 +171,7 @@ def send_whatsapp():
     try:
         import subprocess
         subprocess.run(["am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{n}?text={urllib.parse.quote(m)}"], capture_output=True, timeout=2)
-    except Exception:
-        pass
+    except: pass
     return jsonify({"status": "queued"})
 
 @app.route('/api/social/telegram/send', methods=['POST'])
@@ -136,8 +181,7 @@ def send_telegram():
     try:
         import subprocess
         subprocess.run(["am", "start", "-a", "android.intent.action.VIEW", "-d", "tg://resolve?domain=BotFather"], capture_output=True, timeout=2)
-    except Exception:
-        pass
+    except: pass
     return jsonify({"status": "queued", "message": m})
 
 @app.route('/api/social/notifications')
@@ -147,8 +191,7 @@ def notifications():
         r = subprocess.run(["termux-notification-list"], capture_output=True, text=True, timeout=5)
         if r.returncode == 0:
             return jsonify({"notifications": json.loads(r.stdout)})
-    except Exception:
-        pass
+    except: pass
     return jsonify({"notifications": []})
 
 @app.route('/api/social/contacts')
@@ -158,17 +201,15 @@ def contacts():
         r = subprocess.run(["termux-contact-list"], capture_output=True, text=True, timeout=5)
         if r.returncode == 0:
             return jsonify({"contacts": json.loads(r.stdout)})
-    except Exception:
-        pass
+    except: pass
     return jsonify({"contacts": []})
 
 # ═══════════════════════════════════════════════════════════════
-# TRADING — Mock + Real Alpaca
+# TRADING
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/trading/price/<symbol>')
 def stock_price(symbol):
-    # Try Alpaca first, fallback to mock
     if ALPACA_API_KEY:
         try:
             req = urllib.request.Request(
@@ -178,8 +219,7 @@ def stock_price(symbol):
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read())
                 return jsonify({"symbol": symbol.upper(), "price": data['quote']['ap'], "currency": "USD", "source": "alpaca"})
-        except Exception:
-            pass
+        except: pass
     base = {"AAPL": 175, "TSLA": 240, "NVDA": 890, "GOOGL": 175, "AMZN": 185, "MSFT": 420}
     return jsonify({"symbol": symbol.upper(), "price": base.get(symbol.upper(), random.randint(50, 500)), "currency": "USD", "source": "mock"})
 
@@ -200,11 +240,14 @@ def buy_stock():
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read())
                 TRADE_HISTORY.append({"time": str(datetime.now()), "action": "buy", "symbol": sym, "qty": qty})
+                save_state()
                 return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "alpaca", "order_id": data.get('id')})
         except Exception as e:
-            return jsonify({"status": "ERROR", "error": str(e), "symbol": sym.upper()})
+            return jsonify({"status": "ERROR", "error": str(e)})
 
     TRADE_HISTORY.append({"time": str(datetime.now()), "action": "buy", "symbol": sym, "qty": qty})
+    PORTFOLIO['cash'] -= qty * 175
+    save_state()
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "mock"})
 
 @app.route('/api/trading/sell', methods=['POST'])
@@ -224,11 +267,14 @@ def sell_stock():
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read())
                 TRADE_HISTORY.append({"time": str(datetime.now()), "action": "sell", "symbol": sym, "qty": qty})
+                save_state()
                 return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "alpaca", "order_id": data.get('id')})
         except Exception as e:
-            return jsonify({"status": "ERROR", "error": str(e), "symbol": sym.upper()})
+            return jsonify({"status": "ERROR", "error": str(e)})
 
     TRADE_HISTORY.append({"time": str(datetime.now()), "action": "sell", "symbol": sym, "qty": qty})
+    PORTFOLIO['cash'] += qty * 175
+    save_state()
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "mock"})
 
 @app.route('/api/trading/portfolio')
@@ -242,16 +288,15 @@ def portfolio():
             with urllib.request.urlopen(req, timeout=5) as resp:
                 positions = json.loads(resp.read())
                 return jsonify({"positions": positions, "broker": "alpaca", "live": True})
-        except Exception:
-            pass
-    return jsonify({"cash": 10000.00, "positions": [{"symbol": "AAPL", "qty": 10, "avg_price": 170}, {"symbol": "TSLA", "qty": 5, "avg_price": 230}], "total_value": 12900.00, "broker": "mock"})
+        except: pass
+    return jsonify({**PORTFOLIO, "broker": "mock"})
 
 @app.route('/api/trading/history')
 def trade_history():
     return jsonify({"trades": TRADE_HISTORY[-50:]})
 
 # ═══════════════════════════════════════════════════════════════
-# WATCHLIST + PRICE ALERTS
+# WATCHLIST + ALERTS
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/watchlist', methods=['GET', 'POST', 'DELETE'])
@@ -260,13 +305,13 @@ def watchlist():
     if request.method == 'POST':
         d = request.get_json() or {}
         sym = d.get('symbol', '').upper()
-        target = d.get('target_price')
-        WATCHLIST[sym] = {"target": target, "added": str(datetime.now())}
+        WATCHLIST[sym] = {"target": d.get('target_price'), "added": str(datetime.now())}
+        save_state()
         return jsonify({"watchlist": WATCHLIST})
     if request.method == 'DELETE':
         d = request.get_json() or {}
-        sym = d.get('symbol', '').upper()
-        WATCHLIST.pop(sym, None)
+        WATCHLIST.pop(d.get('symbol', '').upper(), None)
+        save_state()
         return jsonify({"watchlist": WATCHLIST})
     return jsonify({"watchlist": WATCHLIST})
 
@@ -274,7 +319,6 @@ def watchlist():
 def check_watchlist():
     results = []
     for sym, info in WATCHLIST.items():
-        # Get current price
         price_data = stock_price(sym).get_json()
         current = price_data.get('price', 0)
         target = info.get('target')
@@ -282,11 +326,12 @@ def check_watchlist():
         if target and current <= target:
             triggered = True
             ALERTS.append({"symbol": sym, "current": current, "target": target, "time": str(datetime.now())})
+            save_state()
         results.append({"symbol": sym, "current": current, "target": target, "triggered": triggered})
     return jsonify({"results": results, "alerts": ALERTS[-10:]})
 
 # ═══════════════════════════════════════════════════════════════
-# AUTO-TRADING RULES ENGINE
+# AUTO-TRADING RULES
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/rules', methods=['GET', 'POST', 'DELETE'])
@@ -297,18 +342,19 @@ def rules():
         rule = {
             "id": len(AUTO_RULES) + 1,
             "symbol": d.get('symbol', '').upper(),
-            "condition": d.get('condition', 'below'),  # below / above
+            "condition": d.get('condition', 'below'),
             "target_price": d.get('target_price', 0),
-            "action": d.get('action', 'buy'),  # buy / sell
+            "action": d.get('action', 'buy'),
             "qty": d.get('qty', 1),
             "active": True
         }
         AUTO_RULES.append(rule)
+        save_state()
         return jsonify({"rules": AUTO_RULES})
     if request.method == 'DELETE':
         d = request.get_json() or {}
-        rid = d.get('id')
-        AUTO_RULES = [r for r in AUTO_RULES if r['id'] != rid]
+        AUTO_RULES = [r for r in AUTO_RULES if r['id'] != d.get('id')]
+        save_state()
         return jsonify({"rules": AUTO_RULES})
     return jsonify({"rules": AUTO_RULES})
 
@@ -333,7 +379,6 @@ def run_rules():
         if should_execute:
             action = rule['action']
             qty = rule['qty']
-            # Execute trade
             if action == 'buy':
                 with app.test_client() as c:
                     c.post('/api/trading/buy', json={"symbol": sym, "qty": qty})
@@ -341,11 +386,12 @@ def run_rules():
                 with app.test_client() as c:
                     c.post('/api/trading/sell', json={"symbol": sym, "qty": qty})
             executed.append({"rule_id": rule['id'], "symbol": sym, "action": action, "qty": qty, "price": current})
-            rule['active'] = False  # One-shot rule
+            rule['active'] = False
+            save_state()
     return jsonify({"executed": executed, "rules": AUTO_RULES})
 
 # ═══════════════════════════════════════════════════════════════
-# AI BRAIN — Groq Integration
+# AI — GROQ
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/chat', methods=['POST'])
@@ -368,9 +414,9 @@ def chat():
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read())
                 reply = data['choices'][0]['message']['content']
-                return jsonify({"reply": reply, "mode": "groq", "model": "llama3-8b"})
+                return jsonify({"reply": reply, "mode": "groq"})
         except Exception as e:
-            return jsonify({"reply": f"Groq error: {str(e)}", "mode": "local"})
+            return jsonify({"reply": f"AI error: {str(e)}", "mode": "local"})
 
     return jsonify({"reply": f"LilJR: {message}", "mode": "local"})
 
@@ -380,8 +426,7 @@ def ai_analyze():
     symbol = d.get('symbol', 'AAPL')
     price_data = stock_price(symbol).get_json()
     current = price_data.get('price', 0)
-
-    prompt = f"Analyze {symbol} stock at ${current}. Give a short trading recommendation in 2 sentences."
+    prompt = f"Analyze {symbol} at ${current}. Trading recommendation in 2 sentences."
 
     if GROQ_API_KEY:
         try:
@@ -397,15 +442,14 @@ def ai_analyze():
             )
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read())
-                analysis = data['choices'][0]['message']['content']
-                return jsonify({"symbol": symbol, "price": current, "analysis": analysis, "mode": "groq"})
+                return jsonify({"symbol": symbol, "price": current, "analysis": data['choices'][0]['message']['content'], "mode": "groq"})
         except Exception as e:
             return jsonify({"symbol": symbol, "price": current, "analysis": f"Error: {str(e)}", "mode": "local"})
 
-    return jsonify({"symbol": symbol, "price": current, "analysis": "Mock analysis: Hold position.", "mode": "local"})
+    return jsonify({"symbol": symbol, "price": current, "analysis": "Mock: Hold position.", "mode": "local"})
 
 # ═══════════════════════════════════════════════════════════════
-# BACKGROUND WORKER — Price monitor thread
+# BACKGROUND MONITOR
 # ═══════════════════════════════════════════════════════════════
 
 def price_monitor():
@@ -417,23 +461,18 @@ def price_monitor():
             if AUTO_RULES:
                 with app.test_client() as c:
                     c.get('/api/rules/run')
+            save_state()
         except Exception:
             pass
-        time.sleep(60)  # Check every minute
+        time.sleep(60)
 
 # ═══════════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════════
 if __name__ == '__main__':
-    # Start background monitor
-    monitor = threading.Thread(target=price_monitor, daemon=True)
-    monitor.start()
-
-    print(f"🚀 LilJR v6.0 — All Systems")
-    print(f"   Phone control: /api/phone/*")
-    print(f"   Trading: /api/trading/* (broker: {'alpaca' if ALPACA_API_KEY else 'mock'})")
-    print(f"   AI: /api/chat (brain: {'groq' if GROQ_API_KEY else 'local'})")
-    print(f"   Watchlist: /api/watchlist")
-    print(f"   Auto-rules: /api/rules")
+    threading.Thread(target=price_monitor, daemon=True).start()
+    print(f"🚀 LilJR v6.1 — PERSISTENT")
+    print(f"   State: {STATE_FILE}")
+    print(f"   Watchlist: {len(WATCHLIST)}, Rules: {len(AUTO_RULES)}, Trades: {len(TRADE_HISTORY)}")
     print(f"   Running on http://0.0.0.0:{PORT}")
     app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
