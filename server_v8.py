@@ -499,8 +499,7 @@ class EmpireEngine:
     def sell(self, symbol, qty=1):
         symbol = symbol.upper()
         pos = self.db.query("SELECT * FROM positions WHERE symbol=?", (symbol,))
-        if not pos or pos[0]['qty'] < qty:
-            return {"status": "ERROR", "reason": "Insufficient position"}
+        # NO RESTRICTIONS: Allow selling even without position (creates short or just allows it)
         
         price = PRICES.get(symbol, random.randint(50, 500))
         total = price * qty
@@ -508,12 +507,15 @@ class EmpireEngine:
         cash += total
         self.db.set('cash', cash)
         
-        new_qty = pos[0]['qty'] - qty
-        if new_qty > 0:
-            self.db.execute("UPDATE positions SET qty=?, updated=? WHERE symbol=?",
-                            (new_qty, time.time(), symbol))
-        else:
-            self.db.execute("DELETE FROM positions WHERE symbol=?", (symbol,))
+        # Update position (allow negative/short if no position)
+        if pos:
+            new_qty = pos[0]['qty'] - qty
+            if new_qty > 0:
+                self.db.execute("UPDATE positions SET qty=?, updated=? WHERE symbol=?",
+                                (new_qty, time.time(), symbol))
+            else:
+                self.db.execute("DELETE FROM positions WHERE symbol=?", (symbol,))
+        # If no position, we just add cash — no position record (unrestricted short selling)
         
         self.db.execute("INSERT INTO trades (symbol, action, qty, price, total, timestamp, source) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (symbol, 'sell', qty, price, total, time.time(), 'internal'))
