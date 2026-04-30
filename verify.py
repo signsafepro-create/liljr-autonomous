@@ -28,7 +28,7 @@ def check():
         return False
     
     # 2. Check for old processes
-    ps = subprocess.run("ps -ef | grep -E 'server_v6|server_termux|server\.py' | grep -v grep",
+    ps = subprocess.run("ps -ef | grep -E 'server_v6|server_termux|server[.]py' | grep -v grep",
                        shell=True, capture_output=True, text=True)
     if ps.stdout.strip():
         print("[2] OLD SERVERS FOUND:")
