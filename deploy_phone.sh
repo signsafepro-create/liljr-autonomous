@@ -27,6 +27,7 @@ echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
+cp liljr_immortal_mind.py ~/liljr_immortal_mind.py
 cp liljr_mobile_brain.py ~/liljr_mobile_brain.py
 cp liljr_silent.py ~/liljr_silent.py
 cp liljr_phone_os.html ~/liljr_phone_os.html
@@ -151,8 +152,20 @@ echo ""
 echo "══════════════════════════════════════════════════"
 echo ""
 
-# ─── 10. START MOBILE BRAIN ───
-echo "[10/10] Starting Mobile HQ..."
+# ─── 10. START IMMORTAL MIND + MOBILE BRAIN ───
+echo "[10/10] Starting Immortal Mind..."
+echo "🧠 This brain never stops. It thinks, learns, builds, heals, watches."
+echo "   It will keep running even when you close this screen."
+echo ""
+
+# Start immortal mind in background (no output, no TTY needed)
+nohup python3 ~/liljr_immortal_mind.py > ~/liljr_mind.log 2>&1 &
+sleep 2
+echo "✅ Immortal Mind running in background"
+echo "   Log: ~/liljr_mind.log"
+echo ""
+
+echo "🎤 Now starting voice interface..."
 echo "Say 'Junior' anytime to wake me up."
 echo "Your phone IS the AI now."
 echo ""
