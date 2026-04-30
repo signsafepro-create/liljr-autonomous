@@ -917,6 +917,51 @@ class Handler(BaseHTTPRequestHandler):
                 target = 'http://' + target
             self._json_response(engine.discover(target))
         
+        # ═══ AUTONOMOUS MODULES (read-only) ═══
+        elif path == '/api/self/scan':
+            if engine.awareness:
+                files = engine.awareness.scan_self()
+                self._json_response({"files": len(files), "scan_complete": True})
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/self/status':
+            if engine.awareness:
+                self._json_response(engine.awareness.get_status())
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/self/decisions':
+            if engine.awareness:
+                engine.awareness.scan_self()
+                engine.awareness.analyze_health()
+                decisions = engine.awareness.decide_next_action()
+                self._json_response({"decisions": decisions})
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/coder/analyze':
+            if engine.coder:
+                report = engine.coder.analyze_project()
+                self._json_response(report)
+            else:
+                self._json_response({"error": "Auto-coder not available"})
+        
+        elif path == '/api/web/themes':
+            self._json_response({"themes": list(WebBuilderV2.THEMES.keys())})
+        
+        elif path == '/api/web/list':
+            if engine.web_builder:
+                self._json_response({"sites": engine.web_builder.list_sites()})
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/autonomous/status':
+            if engine.autonomous:
+                self._json_response(engine.autonomous.get_report())
+            else:
+                self._json_response({"status": "not_running"})
+        
         else:
             self._json_response({"error": "Unknown endpoint", "path": path, "version": VERSION}, 404)
     
