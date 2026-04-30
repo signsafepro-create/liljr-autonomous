@@ -131,7 +131,12 @@ h1,h2,h3{{margin:0 0 20px}}
         return body
 
     def _render_section(self, section, theme):
+        # Handle string shorthand: 'hero' → dict
+        if isinstance(section, str):
+            section = {'type': section}
         stype = section.get('type', 'text')
+        
+        # Default title/text from business context if not provided
         if stype == 'hero':
             return f"""
 <div class="hero">
@@ -141,16 +146,35 @@ h1,h2,h3{{margin:0 0 20px}}
 </div>
 """
         elif stype == 'features':
-            cards = ''.join([f'<div class="card"><h3>⚡ {f["title"]}</h3><p>{f["desc"]}</p></div>' for f in section.get('items', [])])
+            items = section.get('items', [
+                {"title": "Lightning Fast", "desc": "Built for speed. No lag."},
+                {"title": "Bulletproof", "desc": "Handles whatever you throw at it."},
+                {"title": "Yours", "desc": "You own it. No subscriptions."}
+            ])
+            cards = ''.join([f'<div class="card"><h3>⚡ {f["title"]}</h3><p>{f["desc"]}</p></div>' for f in items])
             return f'<div class="container"><h2 style="text-align:center">{section.get("title", "Features")}</h2><div class="grid">{cards}</div></div>'
         elif stype == 'pricing':
-            cards = ''.join([f'<div class="card" style="text-align:center"><h3>{p["name"]}</h3><div class="price">{p["price"]}</div><p>{p["desc"]}</p><a href="#" class="btn">{p.get("cta", "Choose")}</a></div>' for p in section.get('plans', [])])
+            plans = section.get('plans', [
+                {"name": "Starter", "price": "$9", "desc": "Everything to begin"},
+                {"name": "Pro", "price": "$29", "desc": "For serious builders"},
+                {"name": "Empire", "price": "$99", "desc": "Unlimited power"}
+            ])
+            cards = ''.join([f'<div class="card" style="text-align:center"><h3>{p["name"]}</h3><div class="price">{p["price"]}</div><p>{p["desc"]}</p><a href="#" class="btn">{p.get("cta", "Choose")}</a></div>' for p in plans])
             return f'<div class="container"><h2 style="text-align:center">{section.get("title", "Pricing")}</h2><div class="grid">{cards}</div></div>'
         elif stype == 'testimonials':
-            cards = ''.join([f'<div class="card"><p style="font-style:italic">"{t["quote"]}"</p><p style="text-align:right;font-weight:bold">— {t["author"]}</p></div>' for t in section.get('items', [])])
+            items = section.get('items', [
+                {"quote": "This changed everything for me.", "author": "Alex K."},
+                {"quote": "Built my site in minutes.", "author": "Jamie R."}
+            ])
+            cards = ''.join([f'<div class="card"><p style="font-style:italic">"{t["quote"]}"</p><p style="text-align:right;font-weight:bold">— {t["author"]}</p></div>' for t in items])
             return f'<div class="container"><h2 style="text-align:center">{section.get("title", "What People Say")}</h2><div class="grid">{cards}</div></div>'
         elif stype == 'stats':
-            stats = ''.join([f'<div style="text-align:center"><div style="font-size:2.5em;font-weight:bold;color:var(--accent)">{s["value"]}</div><div>{s["label"]}</div></div>' for s in section.get('items', [])])
+            items = section.get('items', [
+                {"value": "10K+", "label": "Users"},
+                {"value": "99.9%", "label": "Uptime"},
+                {"value": "0", "label": "Downtime"}
+            ])
+            stats = ''.join([f'<div style="text-align:center"><div style="font-size:2.5em;font-weight:bold;color:var(--accent)">{s["value"]}</div><div>{s["label"]}</div></div>' for s in items])
             return f'<div class="container"><div class="card" style="display:flex;justify-content:space-around;flex-wrap:wrap">{stats}</div></div>'
         elif stype == 'cta':
             return f'<div class="container" style="text-align:center;padding:80px 20px"><h2>{section.get("title", "Ready?")}</h2><p>{section.get("text", "")}</p><a href="{section.get("link", "#")}" class="btn" style="font-size:1.2em;padding:18px 48px">{section.get("cta", "Start Now")}</a></div>'
