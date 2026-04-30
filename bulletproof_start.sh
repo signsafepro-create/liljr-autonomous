@@ -24,7 +24,7 @@ termux-wake-lock 2>/dev/null || echo "[BULLETPROOF] wake-lock not available" >> 
 # & = background
 # >/dev/null 2>&1 = no output that could block
 if [ -f "$SERVER" ]; then
-    nohup python3 "$SERVER" > /dev/null 2>&1 &
+    nohup python3 "$SERVER" > "$HOME/liljr_startup.log" 2>&1 &
     PID=$!
     echo $PID > "$PIDFILE"
     echo "[BULLETPROOF] Server PID: $PID" >> "$LOG"
