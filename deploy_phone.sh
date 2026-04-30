@@ -1,12 +1,13 @@
 #!/bin/bash
-# deploy_phone.sh — ONE COMMAND. Deploy LilJR Phone OS to your Galaxy.
-# Everything. App icon. Security. VPN bouncing. Firewall. All of it.
+# deploy_phone.sh — ONE COMMAND. Deploy LilJR Mobile HQ to your Galaxy.
+# Everything. App icon. Security. VPN. Cell towers. WiFi. All apps. No limits.
 
 echo ""
-echo "╔═══════════════════════════════════════╗"
-echo "║     ⚡ LILJR PHONE DEPLOY v23.0       ║"
-echo "║   One push. Full phone integration.    ║"
-echo "╚═══════════════════════════════════════╝"
+echo "╔════════════════════════════════════════════════╗"
+echo "║     ⚡ LILJR MOBILE HQ v24.0 DEPLOYER          ║"
+echo "║   One push. Full phone integration.            ║"
+echo "║   Your phone IS the AI. No computer needed.    ║"
+echo "╚════════════════════════════════════════════════╝"
 echo ""
 
 # ─── 1. KILL EVERYTHING OLD ───
@@ -25,7 +26,8 @@ git pull origin main 2>/dev/null
 echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
-echo "[3/10] Copying files..."
+echo "[3/10] Copying mobile brain..."
+cp liljr_mobile_brain.py ~/liljr_mobile_brain.py
 cp liljr_silent.py ~/liljr_silent.py
 cp liljr_phone_os.html ~/liljr_phone_os.html
 cp manifest.json ~/manifest.json
@@ -84,26 +86,35 @@ mkdir -p ~/.shortcuts
 cp ~/jr.sh ~/.shortcuts/LilJR
 chmod +x ~/.shortcuts/LilJR
 ln -sf ~/.shortcuts/LilJR ~/.shortcuts/liljr 2>/dev/null
+
+# Create the new Mobile HQ shortcut
+cat > ~/.shortcuts/LilJR-HQ << 'EOF'
+#!/bin/bash
+cd ~/liljr-autonomous
+git pull origin main 2>/dev/null
+cp liljr_mobile_brain.py ~/liljr_mobile_brain.py
+python3 ~/liljr_mobile_brain.py
+EOF
+chmod +x ~/.shortcuts/LilJR-HQ
 echo "✅ Shortcuts ready"
 echo ""
 echo "📱 Add to home screen:"
-echo "   Long press home → Widgets → Termux:Widget → LilJR"
+echo "   Long press home → Widgets → Termux:Widget → LilJR-HQ"
 echo ""
 
 # ─── 8. OPEN PHONE OS IN BROWSER ───
 echo "[8/10] Launching Phone OS..."
-# Open Chrome to the PWA
 am start -n com.android.chrome/com.google.android.apps.chrome.MainActivity -d "http://localhost:8000/phone" 2>/dev/null || \
 am start -a android.intent.action.VIEW -d "http://localhost:8000/phone" 2>/dev/null
 echo "✅ Chrome opened to LilJR Phone OS"
 
 # ─── 9. SHOW INSTRUCTIONS ───
 echo ""
-echo "═══════════════════════════════════════════"
-echo "  🚀 LILJR PHONE OS IS LIVE"
-echo "═══════════════════════════════════════════"
+echo "══════════════════════════════════════════════════"
+echo "  🚀 LILJR MOBILE HQ IS LIVE"
+echo "══════════════════════════════════════════════════"
 echo ""
-echo "📲 HOME SCREEN:"
+echo "📲 HOME SCREEN APP:"
 echo "   Tap Chrome menu (3 dots) → 'Add to Home Screen'"
 echo "   LilJR will appear as a real app icon"
 echo ""
@@ -112,27 +123,37 @@ echo "   Tap LilJR button → Say 'Junior' → Say command"
 echo "   Say 'stop' → done"
 echo ""
 echo "🏦 BANKING APPS:"
-echo "   Open LilJR Phone OS → tap any app → opens it"
-echo "   Or say: 'Junior, open Chase' / 'Junior, open Venmo'"
+echo "   'Junior, open Chase' → opens Chase"
+echo "   'Junior, open Venmo' → opens Venmo"
+echo "   'Junior, open Robinhood' → opens Robinhood"
+echo "   'Junior, open Cash App' → opens Cash App"
+echo ""
+echo "📡 NETWORK:"
+echo "   Cellular: AUTO (always connected)"
+echo "   WiFi: AUTO (scans and connects)"
+echo "   Hotspot: 'Junior, hotspot on'"
+echo "   Tor VPN: 'Junior, Tor on'"
 echo ""
 echo "🛡️ SECURITY:"
 echo "   Firewall: BLOCKING all incoming except localhost"
 echo "   Tor: Bouncing IP every 10 minutes"
 echo "   Guardian: Watching files for tampering"
 echo ""
-echo "📊 STATUS CHECK:"
-echo "   bash ~/go2.sh       → full restart"
-echo "   bash ~/security.sh  → re-harden security"
+echo "📊 STATUS:"
+echo "   bash ~/go2.sh        → full restart"
+echo "   bash ~/security.sh   → re-harden security"
 echo "   bash ~/tor_bounce.sh → manual IP rotation"
+echo "   python3 ~/liljr_mobile_brain.py → Mobile HQ"
 echo ""
 echo "⚡ Phone URL: http://localhost:8000/phone"
 echo "⚡ Terminal URL: http://localhost:8000/terminal"
 echo ""
-echo "═══════════════════════════════════════════"
+echo "══════════════════════════════════════════════════"
 echo ""
 
-# ─── 10. START SILENT VOICE LISTENER ───
-echo "[10/10] Starting voice listener..."
+# ─── 10. START MOBILE BRAIN ───
+echo "[10/10] Starting Mobile HQ..."
 echo "Say 'Junior' anytime to wake me up."
+echo "Your phone IS the AI now."
 echo ""
-python3 ~/liljr_silent.py
+python3 ~/liljr_mobile_brain.py
