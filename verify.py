@@ -56,9 +56,12 @@ def check():
     all_ok = True
     for path, name in endpoints:
         try:
+            method = 'POST' if path in ('/api/self/improve', '/api/marketing/copy', '/api/search/deep') else 'GET'
+            data = b'{}' if method == 'POST' else None
             req = urllib.request.Request(f"http://localhost:8000{path}", 
-                                        data=b'{}', 
-                                        headers={'Content-Type': 'application/json'})
+                                        data=data, 
+                                        headers={'Content-Type': 'application/json'},
+                                        method=method)
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read())
             if "error" in data and "not available" in str(data.get("error", "")):
