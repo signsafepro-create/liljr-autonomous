@@ -66,6 +66,14 @@ case "$CMD" in
         ensure_server
         python3 ~/liljr_consciousness.py "$@"
         ;;
+    conv|voice-talk|vt)
+        # Conversation mode — natural voice back-and-forth
+        if ! pgrep -f "liljr_conversation_daemon" > /dev/null; then
+            python3 ~/liljr-autonomous/liljr_conversation_daemon.py start
+            sleep 2
+        fi
+        python3 ~/liljr-autonomous/liljr_conversation.py
+        ;;
     abel|a|do|ask)
         ensure_server
         if [ $# -eq 0 ]; then
@@ -195,6 +203,7 @@ case "$CMD" in
     help|--help|-h)
         echo "LILJR ULTIMATE — Commands:"
         echo "  talk, t          — Consciousness mode"
+        echo "  conv, voice-talk — Natural voice conversation (just talk)"
         echo "  start, s         — Start server"
         echo "  stop             — Kill server"
         echo "  status           — Health check"
