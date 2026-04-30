@@ -39,7 +39,7 @@ chmod +x ~/lj
 # 6. Start server
 echo "Starting server..."
 cd ~/liljr-autonomous/backend
-nohup python server_v6.py > ~/liljr.log 2>&1 &
+nohup python server_v8.py > ~/liljr.log 2>&1 &
 sleep 2
 
 # 7. Verify
