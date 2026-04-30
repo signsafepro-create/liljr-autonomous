@@ -8,6 +8,9 @@ case "$1" in
   # ═══ START / STOP ═══
   start)
     echo "🚀 Starting LilJR OS..."
+    pkill -f "python.*server" 2>/dev/null
+    pkill -f "liljr_os.py" 2>/dev/null
+    sleep 1
     nohup python3 ~/liljr-autonomous/liljr_os.py > /dev/null 2>&1 &
     sleep 2
     curl -s "$BASE/api/health" && echo ""
