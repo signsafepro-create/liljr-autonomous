@@ -10,6 +10,22 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
 # ═══════════════════════════════════════════════════════════════
+# AUTO-CODER, MARKETING, SEARCH, SELF-AWARENESS IMPORTS
+# ═══════════════════════════════════════════════════════════════
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from auto_coder import AutoCoder
+    from marketing_engine import MarketingEngine
+    from deep_search import DeepSearch
+    from self_awareness_v2 import SelfAwareness
+    from autonomous_loop import AutonomousLoop
+    AUTONOMOUS_AVAILABLE = True
+except Exception as e:
+    AUTONOMOUS_AVAILABLE = False
+    print(f"[EMPIRE] Autonomous modules not available: {e}")
+
+# ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
 DB_PATH = os.path.expanduser('~/liljr_empire.db')
@@ -361,6 +377,25 @@ class EmpireEngine:
         self._auto_save_thread = threading.Thread(target=self._auto_save, daemon=True)
         self._auto_save_thread.start()
         self._healer_thread = threading.Thread(target=self._healer, daemon=True)
+        self._healer_thread.start()
+        self._backup_thread = threading.Thread(target=self._auto_backup, daemon=True)
+        self._backup_thread.start()
+        
+        # Autonomous modules
+        if AUTONOMOUS_AVAILABLE:
+            self.coder = AutoCoder('~/liljr-autonomous')
+            self.marketing = MarketingEngine()
+            self.search = DeepSearch()
+            self.awareness = SelfAwareness('~/liljr-autonomous')
+            self.autonomous = None  # Started on demand
+            self.db.log('INFO', f'Empire Engine v8.0 started with autonomous modules', 'core')
+        else:
+            self.coder = None
+            self.marketing = None
+            self.search = None
+            self.awareness = None
+            self.autonomous = None
+            self.db.log('INFO', f'Empire Engine v8.0 started (no autonomous modules)', 'core')
         self._healer_thread.start()
         self._backup_thread = threading.Thread(target=self._auto_backup, daemon=True)
         self._backup_thread.start()
@@ -962,6 +997,138 @@ class Handler(BaseHTTPRequestHandler):
             self._json_response(engine.backup())
         elif path == '/api/flush-logs':
             self._json_response(engine.flush_logs())
+        
+        # ═══ AUTONOMOUS MODULES ═══
+        elif path == '/api/self/scan':
+            if engine.awareness:
+                files = engine.awareness.scan_self()
+                self._json_response({"files": len(files), "scan_complete": True})
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/self/status':
+            if engine.awareness:
+                self._json_response(engine.awareness.get_status())
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/self/improve':
+            if engine.awareness:
+                result = engine.awareness.self_improve()
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/self/decisions':
+            if engine.awareness:
+                engine.awareness.scan_self()
+                engine.awareness.analyze_health()
+                decisions = engine.awareness.decide_next_action()
+                self._json_response({"decisions": decisions})
+            else:
+                self._json_response({"error": "Self-awareness not available"})
+        
+        elif path == '/api/coder/analyze':
+            if engine.coder:
+                report = engine.coder.analyze_project()
+                self._json_response(report)
+            else:
+                self._json_response({"error": "Auto-coder not available"})
+        
+        elif path == '/api/coder/generate':
+            if engine.coder:
+                purpose = data.get('purpose', 'utility')
+                funcs = data.get('functions', [['run', 'Main function', [], ['pass']]])
+                result = engine.coder.generate_module_for(purpose, [(f[0], f[1]) for f in funcs])
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Auto-coder not available"})
+        
+        elif path == '/api/coder/landing':
+            if engine.coder:
+                name = data.get('name', 'Empire')
+                tagline = data.get('tagline', 'Built different')
+                features = data.get('features', [['Fast', 'Lightning speed'], ['Smart', 'AI powered']])
+                html = engine.coder.generate_landing_page(name, tagline, features)
+                path = data.get('path', f'web/{name.lower().replace(" ", "_")}.html')
+                result = engine.coder.write_file(path, html)
+                self._json_response({"html": html[:200], "saved": result})
+            else:
+                self._json_response({"error": "Auto-coder not available"})
+        
+        elif path == '/api/marketing/copy':
+            if engine.marketing:
+                copies = engine.marketing.generate_copy(
+                    data.get('product', 'LilJR'),
+                    data.get('type', 'launch'),
+                    data.get('count', 3)
+                )
+                self._json_response({"copies": copies})
+            else:
+                self._json_response({"error": "Marketing engine not available"})
+        
+        elif path == '/api/marketing/calendar':
+            if engine.marketing:
+                calendar = engine.marketing.generate_social_calendar(
+                    data.get('product', 'LilJR'),
+                    data.get('days', 7)
+                )
+                self._json_response({"calendar": calendar})
+            else:
+                self._json_response({"error": "Marketing engine not available"})
+        
+        elif path == '/api/marketing/seo':
+            if engine.marketing:
+                content = engine.marketing.generate_seo_content(
+                    data.get('keyword', 'AI tools'),
+                    data.get('sections', 5)
+                )
+                self._json_response(content)
+            else:
+                self._json_response({"error": "Marketing engine not available"})
+        
+        elif path == '/api/search/deep':
+            if engine.search:
+                result = engine.search.deep_scan(
+                    data.get('query', 'AI trends'),
+                    data.get('depth', 2)
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Deep search not available"})
+        
+        elif path == '/api/search/competitors':
+            if engine.search:
+                comps = engine.search.find_competitors(data.get('niche', 'AI tools'))
+                self._json_response({"competitors": comps})
+            else:
+                self._json_response({"error": "Deep search not available"})
+        
+        elif path == '/api/autonomous/start':
+            if engine.autonomous is None and AUTONOMOUS_AVAILABLE:
+                engine.autonomous = AutonomousLoop()
+                engine.autonomous._start_time = time.time()
+                t = threading.Thread(target=engine.autonomous.run_forever, args=(60,), daemon=True)
+                t.start()
+                self._json_response({"status": "started", "mode": "autonomous"})
+            elif engine.autonomous:
+                self._json_response({"status": "already_running"})
+            else:
+                self._json_response({"error": "Autonomous loop not available"})
+        
+        elif path == '/api/autonomous/status':
+            if engine.autonomous:
+                self._json_response(engine.autonomous.get_report())
+            else:
+                self._json_response({"status": "not_running"})
+        
+        elif path == '/api/autonomous/stop':
+            if engine.autonomous:
+                engine.autonomous.stop()
+                engine.autonomous = None
+                self._json_response({"status": "stopped"})
+            else:
+                self._json_response({"status": "not_running"})
         
         else:
             self._json_response({"error": "Unknown endpoint"}, 404)

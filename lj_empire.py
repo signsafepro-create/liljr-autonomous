@@ -203,6 +203,56 @@ def main():
     elif cmd == 'cache':
         print(json.dumps(api_get('/api/cache/stats'), indent=2))
     
+    # ═══ AUTONOMOUS ═══
+    elif cmd == 'self-scan':
+        print(json.dumps(api_get('/api/self/scan'), indent=2))
+    
+    elif cmd == 'self-status':
+        print(json.dumps(api_get('/api/self/status'), indent=2))
+    
+    elif cmd == 'self-improve':
+        print(json.dumps(api_post('/api/self/improve'), indent=2))
+    
+    elif cmd == 'self-decide':
+        print(json.dumps(api_get('/api/self/decisions'), indent=2))
+    
+    elif cmd == 'coder-analyze':
+        print(json.dumps(api_get('/api/coder/analyze'), indent=2))
+    
+    elif cmd == 'coder-generate':
+        purpose = sys.argv[2] if len(sys.argv) > 2 else 'utility'
+        print(json.dumps(api_post('/api/coder/generate', {"purpose": purpose, "functions": [["run", "Main function"]]}), indent=2))
+    
+    elif cmd == 'landing':
+        name = sys.argv[2] if len(sys.argv) > 2 else 'Empire'
+        tagline = sys.argv[3] if len(sys.argv) > 3 else 'Built different'
+        print(json.dumps(api_post('/api/coder/landing', {"name": name, "tagline": tagline}), indent=2))
+    
+    elif cmd == 'marketing':
+        product = sys.argv[2] if len(sys.argv) > 2 else 'LilJR'
+        print(json.dumps(api_post('/api/marketing/copy', {"product": product, "type": "launch", "count": 3}), indent=2))
+    
+    elif cmd == 'calendar':
+        product = sys.argv[2] if len(sys.argv) > 2 else 'LilJR'
+        print(json.dumps(api_post('/api/marketing/calendar', {"product": product, "days": 7}), indent=2))
+    
+    elif cmd == 'deep-search':
+        query = sys.argv[2] if len(sys.argv) > 2 else 'AI trends'
+        print(json.dumps(api_post('/api/search/deep', {"query": query, "depth": 2}), indent=2))
+    
+    elif cmd == 'competitors':
+        niche = sys.argv[2] if len(sys.argv) > 2 else 'AI tools'
+        print(json.dumps(api_post('/api/search/competitors', {"niche": niche}), indent=2))
+    
+    elif cmd == 'autonomous-start':
+        print(json.dumps(api_post('/api/autonomous/start'), indent=2))
+    
+    elif cmd == 'autonomous-status':
+        print(json.dumps(api_get('/api/autonomous/status'), indent=2))
+    
+    elif cmd == 'autonomous-stop':
+        print(json.dumps(api_post('/api/autonomous/stop'), indent=2))
+    
     # ═══ HELP ═══
     elif cmd in ('help', ''):
         print_help()
@@ -269,6 +319,30 @@ SYSTEM:
   python3 ~/lj_empire.py logs         — View system logs
   python3 ~/lj_empire.py flush-logs   — Clear logs
   python3 ~/lj_empire.py cache        — Cache stats
+
+SELF-AWARENESS:
+  python3 ~/lj_empire.py self-scan    — Scan codebase
+  python3 ~/lj_empire.py self-status  — Self-awareness status
+  python3 ~/lj_empire.py self-improve — Auto-fix issues
+  python3 ~/lj_empire.py self-decide  — What to build next
+
+AUTO-CODER:
+  python3 ~/lj_empire.py coder-analyze — Analyze project
+  python3 ~/lj_empire.py coder-generate utility — Generate module
+  python3 ~/lj_empire.py landing "MyApp" "Tagline" — Build landing page
+
+MARKETING:
+  python3 ~/lj_empire.py marketing "Product" — Generate copy
+  python3 ~/lj_empire.py calendar "Product" — Social calendar
+
+DEEP SEARCH:
+  python3 ~/lj_empire.py deep-search "AI trends" — Web intelligence
+  python3 ~/lj_empire.py competitors "niche" — Find competitors
+
+AUTONOMOUS LOOP:
+  python3 ~/lj_empire.py autonomous-start — Start non-stop thinking
+  python3 ~/lj_empire.py autonomous-status — Check progress
+  python3 ~/lj_empire.py autonomous-stop — Stop loop
 """)
 
 if __name__ == '__main__':
