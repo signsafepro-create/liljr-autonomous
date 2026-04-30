@@ -61,17 +61,18 @@ def api_post(path, data=None, timeout=10):
 
 def server_alive():
     h = api_get('/api/health')
+    if 'version' in h and 'liljr-empire' in h.get('version', ''):
+        return True
+    # Retry once — server might be warming up
+    time.sleep(2)
+    h = api_get('/api/health')
     return 'version' in h and 'liljr-empire' in h.get('version', '')
 
 def start_server():
-    """Ensure v8 server is running."""
+    """Ensure v8 server is running. Don't kill a working server."""
     if server_alive():
         return True
-    # Kill everything old
-    for pattern in ['python.*server', 'server_v[0-9]', 'liljr_os', 'watchdog']:
-        subprocess.run(['pkill', '-9', '-f', pattern], capture_output=True)
-    time.sleep(2)
-    # Start v8
+    # Server is actually dead — start fresh (no kill, port might still be freeing)
     server_path = os.path.join(REPO, 'server_v8.py')
     if os.path.exists(server_path):
         subprocess.Popen(
@@ -80,7 +81,7 @@ def start_server():
             stderr=subprocess.DEVNULL,
             start_new_session=True
         )
-        time.sleep(5)
+        time.sleep(8)  # Give it time to bind
         return server_alive()
     return False
 
