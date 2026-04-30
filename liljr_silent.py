@@ -9,10 +9,22 @@ import os, sys, time, json, re, subprocess
 
 HOME = os.path.expanduser("~")
 REPO = os.path.join(HOME, "liljr-autonomous")
+sys.path.insert(0, REPO)
 
 # ─── ONE WORD WAKE ───
 WAKE_WORDS = ["junior", "juni", "jr"]
-STOP_WORDS = ["stop", "done", "enough", "quiet", "sleep", "later", "bye", "that\'s enough"]
+STOP_WORDS = ["stop", "done", "enough", "quiet", "sleep", "later", "bye"]
+STOP_PHRASES = ["that's enough", "that is enough", "thats enough"]
+
+def _is_stop(text):
+    """Check if text is a stop command. Uses word boundaries so 'post' doesn't match 'stop'."""
+    if any(p in text for p in STOP_PHRASES):
+        return True
+    return any(re.search(r'\b' + re.escape(w) + r'\b', text) for w in STOP_WORDS)
+
+def _is_wake(text):
+    """Check if text contains a wake word as a whole word."""
+    return any(re.search(r'\b' + re.escape(w) + r'\b', text) for w in WAKE_WORDS)
 
 def listen(timeout=8):
     try:
@@ -22,40 +34,58 @@ def listen(timeout=8):
             print(f"[YOU] {heard}")
             return heard.lower()
         return None
-    except:
+    except Exception as e:
         return None
 
 def run_cmd(cmd):
-    try:
-        os.system(cmd + " > /dev/null 2>&1")
-    except:
-        pass
+    """Run shell command silently."""
+    os.system(cmd + " > /dev/null 2>&1")
 
 def open_app(app):
+    """Open an Android app by package name. Tries explicit activity then launcher intent."""
     apps = {
-        'snapchat': 'com.snapchat.android', 'instagram': 'com.instagram.android',
-        'chrome': 'com.android.chrome', 'youtube': 'com.google.android.youtube',
-        'spotify': 'com.spotify.music', 'tiktok': 'com.zhiliaoapp.musically',
-        'whatsapp': 'com.whatsapp', 'telegram': 'org.telegram.messenger',
-        'discord': 'com.discord', 'gmail': 'com.google.android.gm',
-        'maps': 'com.google.android.apps.maps', 'phone': 'com.android.dialer',
-        'messages': 'com.google.android.apps.messaging', 'camera': 'com.android.camera',
-        'settings': 'com.android.settings', 'gallery': 'com.android.gallery3d',
+        'snapchat': 'com.snapchat.android',
+        'instagram': 'com.instagram.android',
+        'chrome': 'com.android.chrome',
+        'youtube': 'com.google.android.youtube',
+        'spotify': 'com.spotify.music',
+        'tiktok': 'com.zhiliaoapp.musically',
+        'whatsapp': 'com.whatsapp',
+        'telegram': 'org.telegram.messenger',
+        'discord': 'com.discord',
+        'gmail': 'com.google.android.gm',
+        'maps': 'com.google.android.apps.maps',
+        'phone': 'com.android.dialer',
+        'messages': 'com.google.android.apps.messaging',
+        'camera': 'com.android.camera',
+        'settings': 'com.android.settings',
+        'gallery': 'com.android.gallery3d',
         'netflix': 'com.netflix.mediaclient',
+        'robinhood': 'com.robinhood.android',
+        'tradingview': 'com.tradingview.tradingviewapp',
+        'calculator': 'com.google.android.calculator',
+        'clock': 'com.google.android.deskclock',
+        'calendar': 'com.google.android.calendar',
+        'files': 'com.google.android.apps.nbu.files',
+        'playstore': 'com.android.vending',
     }
-    pkg = apps.get(app, 'com.android.settings')
-    run_cmd(f'am start -n {pkg}/.MainActivity')
+    pkg = apps.get(app)
+    if pkg:
+        # Try explicit MainActivity, fallback to launcher intent
+        run_cmd(f'am start -n {pkg}/.MainActivity 2>/dev/null || am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n {pkg}')
+    else:
+        run_cmd(f'am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.android.settings')
 
 def handle(text):
     text = text.lower().strip()
     
     # Stop
-    if any(w in text for w in STOP_WORDS):
+    if _is_stop(text):
         print("[JR] Aight. Later.")
         return False
     
     # App open
-    apps = ['snapchat', 'instagram', 'chrome', 'youtube', 'spotify', 'tiktok', 'whatsapp', 'telegram', 'discord', 'gmail', 'maps', 'phone', 'messages', 'camera', 'settings', 'gallery', 'netflix']
+    apps = ['snapchat', 'instagram', 'chrome', 'youtube', 'spotify', 'tiktok', 'whatsapp', 'telegram', 'discord', 'gmail', 'maps', 'phone', 'messages', 'camera', 'settings', 'gallery', 'netflix', 'robinhood', 'tradingview', 'calculator', 'clock', 'calendar', 'files', 'playstore']
     for app in apps:
         if app in text:
             open_app(app)
@@ -142,37 +172,37 @@ def handle(text):
         return True
     
     # Brightness
-    if 'bright' in text:
+    if re.search(r'\b(bright|brighter)\b', text):
         run_cmd('settings put system screen_brightness 200')
         print("[JR] Brighter")
         return True
-    if 'dim' in text or 'dark' in text:
+    if re.search(r'\b(dim|dimmer|dark)\b', text):
         run_cmd('settings put system screen_brightness 30')
         print("[JR] Dimmer")
         return True
     
     # Volume
-    if any(w in text for w in ['louder', 'volume up', 'turn it up']):
+    if re.search(r'\b(louder|volume up|turn it up)\b', text):
         run_cmd('input keyevent KEYCODE_VOLUME_UP')
         print("[JR] Louder")
         return True
-    if any(w in text for w in ['quieter', 'volume down', 'turn it down']):
+    if re.search(r'\b(quieter|volume down|turn it down)\b', text):
         run_cmd('input keyevent KEYCODE_VOLUME_DOWN')
         print("[JR] Quieter")
         return True
     
     # Home / Back
-    if any(w in text for w in ['go home', 'home']):
+    if re.search(r'\b(go home|home)\b', text):
         run_cmd('input keyevent KEYCODE_HOME')
         print("[JR] Home")
         return True
-    if any(w in text for w in ['go back', 'back']):
+    if re.search(r'\b(go back|back)\b', text):
         run_cmd('input keyevent KEYCODE_BACK')
         print("[JR] Back")
         return True
     
-    # Flashlight
-    if any(w in text for w in ['flashlight', 'torch', 'light']):
+    # Flashlight — use word boundaries, 'light' alone is too generic
+    if re.search(r'\b(flashlight|torch|light on|light off)\b', text):
         run_cmd('input keyevent KEYCODE_CAMERA')
         print("[JR] Flashlight")
         return True
@@ -216,7 +246,7 @@ def main():
             continue
         
         # Check wake word
-        if any(w in heard for w in WAKE_WORDS):
+        if _is_wake(heard):
             print("[JR] Yo. What do you need?")
             
             # Listen for command
@@ -231,7 +261,7 @@ def main():
                     break
         
         # Direct stop even without wake
-        elif any(w in heard for w in STOP_WORDS):
+        elif _is_stop(heard):
             print("[JR] Aight. Later.")
             break
 
