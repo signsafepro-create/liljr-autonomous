@@ -22,7 +22,6 @@ termux-wake-lock 2>/dev/null || echo "[BULLETPROOF] wake-lock not available" >> 
 # 3. Start server with FULL isolation from terminal
 # nohup = immune to hangup
 # & = background
-# >/dev/null 2>&1 = no output that could block
 if [ -f "$SERVER" ]; then
     nohup python3 "$SERVER" > "$HOME/liljr_startup.log" 2>&1 &
     PID=$!
