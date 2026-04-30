@@ -422,6 +422,16 @@ class EmpireEngine:
         self.awareness = SelfAwareness('~/liljr-autonomous') if AUTONOMOUS_AWARENESS else None
         self.web_builder = WebBuilderV2('~/liljr-autonomous/web') if AUTONOMOUS_WEB else None
         self.autonomous = None  # Started on demand
+        
+        # Stealth activation
+        try:
+            from liljr_stealth_core import StealthCore
+            self.stealth = StealthCore()
+            if self.stealth.enabled:
+                self.db.log('INFO', 'Stealth mode active', 'stealth')
+        except:
+            self.stealth = None
+        
         self.db.log('INFO', f'Empire Engine v8.0 started', 'core')
     
     # ─── PERSISTENCE ───
@@ -1115,6 +1125,28 @@ class Handler(BaseHTTPRequestHandler):
             self._json_response(engine.backup())
         elif path == '/api/flush-logs':
             self._json_response(engine.flush_logs())
+        
+        # ═══ STEALTH ═══
+        elif path == '/api/stealth/enable':
+            if engine.stealth:
+                engine.stealth.enable()
+                self._json_response({"status": "stealth_enabled"})
+            else:
+                self._json_response({"error": "Stealth module not loaded"}, 500)
+        
+        elif path == '/api/stealth/status':
+            if engine.stealth:
+                status = engine.stealth.status()
+                self._json_response({"status": status})
+            else:
+                self._json_response({"status": "Stealth: OFF (module missing)"})
+        
+        elif path == '/api/stealth/panic':
+            if engine.stealth:
+                threading.Thread(target=engine.stealth.panic, args=("API panic triggered",)).start()
+                self._json_response({"status": "panic_initiated"})
+            else:
+                self._json_response({"error": "Stealth module not loaded"}, 500)
         
         # ═══ AUTONOMOUS MODULES ═══
         elif path == '/api/self/scan':

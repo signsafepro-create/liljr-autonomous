@@ -185,6 +185,7 @@ INTENTS = {
     "vision": ["see", "look", "camera", "photo", "image", "show me", "what is this"],
     "deploy": ["deploy", "push", "publish", "upload", "host", "live"],
     "persona": ["voice", "persona", "talk like", "sound like", "change voice"],
+    "stealth": ["stealth", "invisible", "ghost", "vanish", "panic", "vaporize", "hide", "cloak", "disappear"],
     "help": ["help", "what can you do", "commands", "show me", "list"]
 }
 
@@ -266,6 +267,17 @@ def do_build(text, mem):
         mem['successes'].append({'type': 'build', 'name': name, 'time': time.time()})
         return f"✅ Built `{name}` — {res['pages'].get('index', {}).get('size', '?')} bytes. Theme: {theme}."
     return f"Build result: {json.dumps(res, indent=2)}"
+
+def do_stealth(text, mem):
+    """Stealth mode activation / panic / status."""
+    if 'panic' in text.lower() or 'vaporize' in text.lower() or 'kill' in text.lower():
+        res = api_post('/api/stealth/panic')
+        return f"☠️ {res.get('status', 'Panic initiated')}"
+    if 'status' in text.lower() or 'check' in text.lower():
+        res = api_get('/api/stealth/status')
+        return f"👻 {res.get('status', 'Unknown')}"
+    res = api_post('/api/stealth/enable')
+    return f"👻 Stealth: {res.get('status', 'Activated')}\n\nYou are now invisible. ps aux won't show 'liljr'. ls ~ won't show obvious files.\nIf tampered → instant death and vaporize."
 
 def do_trade(text, mem):
     """Execute a trade. No restrictions."""
@@ -472,6 +484,7 @@ ACTIONS = {
     'vision': do_vision,
     'deploy': do_deploy,
     'persona': do_persona,
+    'stealth': do_stealth,
     'help': do_help,
     'chat': lambda text, mem: f"{speak('acknowledgments')}\n\nTry: build, trade, search, code, execute, market, analyze, vision, deploy. Or just tell me what you need."
 }

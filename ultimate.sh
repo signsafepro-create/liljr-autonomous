@@ -175,6 +175,15 @@ case "$CMD" in
         ensure_server
         python3 ~/liljr_executor.py "$@"
         ;;
+    stealth|ghost|cloak)
+        ensure_server
+        case "${1:-enable}" in
+            enable) curl -s -X POST http://localhost:8000/api/stealth/enable ;;
+            status) curl -s http://localhost:8000/api/stealth/status ;;
+            panic) curl -s -X POST http://localhost:8000/api/stealth/panic ;;
+        esac
+        echo ""
+        ;;
     help|--help|-h)
         echo "LILJR ULTIMATE — Commands:"
         echo "  talk, t          — Consciousness mode"
