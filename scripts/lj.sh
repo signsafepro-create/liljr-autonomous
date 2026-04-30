@@ -114,6 +114,12 @@ with open('$HOME/liljr_state.json', 'w') as f:
     curl -s "$BASE/api/social/clipboard" && echo ""
     ;;
   # ═══════════════════════════════════════════════════════════════
+  # INTELLIGENCE HUB — Worldwide signal catcher
+  # ═══════════════════════════════════════════════════════════════
+  intel)
+    python3 ~/liljr-autonomous/intel_hub.py "$@"
+    ;;
+  # ═══════════════════════════════════════════════════════════════
   # COMMAND CENTER — Talk to it, it does everything
   # ═══════════════════════════════════════════════════════════════
   cc)
@@ -305,6 +311,16 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj analyze NVDA         — AI stock analysis"
     echo "  bash ~/lj voice              — Voice command (phone mic)"
     echo "  bash ~/lj agent trade '{\"symbol\":\"AAPL\",\"qty\":5}'  — Agent task"
+    echo ""
+    echo "INTELLIGENCE HUB:"
+    echo "  bash ~/lj intel query 'AI stocks'     — Search worldwide"
+    echo "  bash ~/lj intel query 'bitcoin' 3     — Deep search"
+    echo "  bash ~/lj intel scan                  — Scan RSS feeds"
+    echo "  bash ~/lj intel keywords AI crypto    — Watch keywords"
+    echo "  bash ~/lj intel alerts                — Recent alerts"
+    echo "  bash ~/lj intel summarize 'bitcoin'   — Intelligence summary"
+    echo "  bash ~/lj intel monitor               — Continuous monitoring"
+    echo "  bash ~/lj intel stats                 — Intelligence stats"
     echo ""
     echo "MEMORY ENGINE:"
     echo "  bash ~/lj memory 'what was my last trade'   — Query memory"
