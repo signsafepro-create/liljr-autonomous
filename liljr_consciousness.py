@@ -14,6 +14,12 @@
 """
 import sys, os, json, time, threading, urllib.request, subprocess, random, re
 
+# ═══ PATH SETUP (BEFORE imports) ═══
+HOME = os.path.expanduser('~')
+REPO = os.path.join(HOME, 'liljr-autonomous')
+if REPO not in sys.path:
+    sys.path.insert(0, REPO)
+
 # ═══ EXECUTOR IMPORT ═══
 from liljr_executor import SafeExecutor, VoiceCommander
 _EXECUTOR = None
@@ -22,12 +28,6 @@ def get_executor():
     if _EXECUTOR is None:
         _EXECUTOR = SafeExecutor()
     return _EXECUTOR
-
-# ═══ PATH SETUP ═══
-HOME = os.path.expanduser('~')
-REPO = os.path.join(HOME, 'liljr-autonomous')
-if REPO not in sys.path:
-    sys.path.insert(0, REPO)
 
 # ═══ CONFIG ═══
 BASE = "http://localhost:8000"
