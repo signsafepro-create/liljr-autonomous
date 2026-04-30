@@ -1,5 +1,5 @@
 #!/bin/bash
-# go2.sh — ONE COMMAND. Kill everything. Start fresh. Just talk.
+# go2.sh — TAP BUTTON or SAY "Junior". No beeps. No hopping.
 
 echo "🔪 Killing all LilJR processes..."
 pkill -9 -f "python.*liljr" 2>/dev/null
@@ -11,20 +11,15 @@ echo "📥 Pulling latest..."
 cd ~/liljr-autonomous
 git pull origin main 2>/dev/null
 
-echo "📋 Copying files..."
-cp liljr_conversational.py ~/liljr_conversational.py
-cp liljr_fullvoice.py ~/liljr_fullvoice.py
-cp liljr_phone_control.py ~/liljr_phone_control.py 2>/dev/null
-cp server_v8.py ~/server_v8.py 2>/dev/null
+echo "📋 Copying silent mode..."
+cp liljr_silent.py ~/liljr_silent.py
+cp jr.sh ~/jr.sh
+chmod +x ~/jr.sh
 
-echo "🚀 Starting server..."
-python3 ~/server_v8.py > ~/server.log 2>&1 &
-sleep 5
-
-echo "⚡ Starting LilJR..."
+echo "🚀 Starting LilJR SILENT MODE..."
 echo ""
-echo "SAY: 'yo junior' to wake up"
-echo "SAY: 'that's enough' to stop"
+echo "SAY: 'Junior' to wake up"
+echo "SAY: 'stop' to end"
 echo ""
 
-python3 ~/liljr_conversational.py
+python3 ~/liljr_silent.py

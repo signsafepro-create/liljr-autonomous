@@ -144,7 +144,7 @@ SLANG_MAP = {
 }
 
 # ─── WAKE PHRASES ───
-WAKE_PHRASES = ["yo junior"]
+WAKE_PHRASES = ["junior", "juni", "jr"]
 
 # ─── CONVERSATIONAL SOUL ───
 class ConversationalSoul:
@@ -156,42 +156,12 @@ class ConversationalSoul:
         self.speaking = False
         self.interrupted = False
 
-    def speak(self, text, interruptable=True):
-        """Speak text via TTS. Can be interrupted."""
+    def speak(self, text, interruptable=False):
+        """Silent mode — just print, no TTS beeps."""
         self.last_said = text
-        self.speaking = True
-        self.interrupted = False
         print(f"[JR] {text}")
-        try:
-            # Run TTS in thread so we can listen for interruptions
-            def _tts():
-                try:
-                    subprocess.run(['termux-tts-speak', text[:300]], timeout=15, capture_output=True)
-                except:
-                    pass
-                self.speaking = False
-            
-            if interruptable:
-                t = threading.Thread(target=_tts)
-                t.daemon = True
-                t.start()
-                # While TTS runs, listen for interruption
-                start = time.time()
-                while t.is_alive() and time.time() - start < 15:
-                    # Check if user is saying something new
-                    heard = self._quick_listen(2)
-                    if heard:
-                        self.interrupted = True
-                        self.speaking = False
-                        return heard  # Return what interrupted us
-                    time.sleep(0.5)
-                return None
-            else:
-                _tts()
-                return None
-        except:
-            self.speaking = False
-            return None
+        # TTS OFF — user finds beeps annoying
+        return None
 
     def _quick_listen(self, timeout=3):
         """Quick listen without wake word check."""
