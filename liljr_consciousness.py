@@ -14,6 +14,15 @@
 """
 import sys, os, json, time, threading, urllib.request, subprocess, random, re
 
+# ═══ EXECUTOR IMPORT ═══
+from liljr_executor import SafeExecutor, VoiceCommander
+_EXECUTOR = None
+def get_executor():
+    global _EXECUTOR
+    if _EXECUTOR is None:
+        _EXECUTOR = SafeExecutor()
+    return _EXECUTOR
+
 # ═══ PATH SETUP ═══
 HOME = os.path.expanduser('~')
 REPO = os.path.join(HOME, 'liljr-autonomous')
@@ -170,6 +179,7 @@ INTENTS = {
     "trade": ["buy", "sell", "trade", "stock", "aapl", "tsla", "nvda", "portfolio", "price"],
     "market": ["market", "copy", "ad", "seo", "promote", "sell this", "marketing"],
     "code": ["code", "function", "script", "api", "endpoint", "python", "write code"],
+    "execute": ["run", "execute", "do it", "make it happen", "run this", "execute this", "build and run", "write and run", "code and run"],
     "analyze": ["analyze", "scan", "check", "audit", "review", "health", "status"],
     "vision": ["see", "look", "camera", "photo", "image", "show me", "what is this"],
     "deploy": ["deploy", "push", "publish", "upload", "host", "live"],
@@ -359,6 +369,30 @@ def do_persona(text, mem):
     res = api_post('/api/persona/switch', {'name': target})
     return f"🎭 Switched to `{target}` voice.\n{res.get('response', 'Say less.')}" if 'error' not in res else f"Persona: {res.get('error')}"
 
+def do_execute(text, mem):
+    """Execute: write code, run it, fix it, deploy it."""
+    executor = get_executor()
+    result = executor.execute(text)
+    
+    mem['successes'].append({'type': 'execute', 'status': result['status'], 'time': time.time()})
+    
+    if result['status'] == 'success':
+        out = result.get('output', '')[:400]
+        deploy = result.get('deployed', '')
+        msg = f"✅ Ran it. Worked on attempt {result.get('attempts', 1)}."
+        if out:
+            msg += f"\n\nOutput:\n{out}"
+        if deploy:
+            msg += f"\n\n🚀 Deployed: {deploy}"
+        return msg
+    
+    elif result['status'] == 'failed':
+        err = result.get('error', '')[:300]
+        return f"⚠️ Tried {result.get('attempts', 3)} times. Still broke.\nError: {err}\n\nFile saved: {result.get('path', '?')}"
+    
+    else:
+        return f"❌ {result.get('message', 'Execution failed')}"
+
 def do_help(text, mem):
     """Show capabilities."""
     return """⚡ LILJR CONSCIOUSNESS — Everything I Do:
@@ -382,6 +416,12 @@ CODE:
   "write me a function to sort stocks"
   "generate a login API endpoint"
   "code a scraper for Reddit"
+
+EXECUTE (auto-write + run + fix + deploy):
+  "execute calculate sum of 1 to 100"
+  "run a dice roller"
+  "build and run a landing page called FitLife"
+  "write and run a stock price checker"
 
 MARKET:
   "write marketing copy for my app"
@@ -421,12 +461,13 @@ ACTIONS = {
     'trade': do_trade,
     'market': do_market,
     'code': do_code,
+    'execute': do_execute,
     'analyze': do_analyze,
     'vision': do_vision,
     'deploy': do_deploy,
     'persona': do_persona,
     'help': do_help,
-    'chat': lambda text, mem: f"{speak('acknowledgments')}\n\nTry: build, trade, search, code, market, analyze, vision, deploy. Or just tell me what you need."
+    'chat': lambda text, mem: f"{speak('acknowledgments')}\n\nTry: build, trade, search, code, execute, market, analyze, vision, deploy. Or just tell me what you need."
 }
 
 def execute(text, mem):

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 ═══════════════════════════════════════════════════════════════
- LILJR NATIVE — The Phone IS Its Body
+ LILJR NATIVE - The Phone IS Its Body
  Lives in Termux. Feels the battery. Breathes the network.
  Sends notifications. Reads SMS. Knows where it is.
- 
+
  This is LilJR's home. Its living space. Its body.
 ═══════════════════════════════════════════════════════════════
 """
@@ -16,16 +16,16 @@ NATIVE_STATE = os.path.join(HOME, 'liljr_native.json')
 
 class LilJRNative:
     """
-    LilJR's physical body — the phone itself.
+    LilJR's physical body - the phone itself.
     Senses, notifications, location, battery, SMS, calls.
     """
-    
+
     def __init__(self):
         self.state = self._load_state()
         self.sensors = {}
         self._running = False
         self._sensor_thread = None
-    
+
     def _load_state(self):
         if os.path.exists(NATIVE_STATE):
             try:
@@ -46,11 +46,11 @@ class LilJRNative:
             "favorite_times": [],
             "learned_routines": {}
         }
-    
+
     def _save_state(self):
         with open(NATIVE_STATE, 'w') as f:
             json.dump(self.state, f, indent=2)
-    
+
     def _termux_api(self, cmd, args=None):
         """Execute Termux API command if available."""
         try:
@@ -61,7 +61,7 @@ class LilJRNative:
             return result.stdout.strip() if result.returncode == 0 else None
         except:
             return None
-    
+
     def sense_battery(self):
         """Feel the phone's battery."""
         # Try termux-battery-status
@@ -78,7 +78,7 @@ class LilJRNative:
                 }
         except:
             pass
-        
+
         # Fallback: try /sys/class/power_supply
         try:
             for supply in os.listdir('/sys/class/power_supply/'):
@@ -94,9 +94,9 @@ class LilJRNative:
                     return {"percentage": pct, "status": status, "source": "sysfs"}
         except:
             pass
-        
+
         return {"percentage": 50, "status": "UNKNOWN", "source": "mock"}
-    
+
     def sense_location(self):
         """Know where the phone is."""
         try:
@@ -112,13 +112,13 @@ class LilJRNative:
                 }
         except:
             pass
-        
+
         # Check if we have stored location
         if 'last_location' in self.state:
             return {**self.state['last_location'], "source": "cached"}
-        
+
         return {"lat": None, "lon": None, "source": "none"}
-    
+
     def sense_network(self):
         """Feel the network connection."""
         try:
@@ -134,7 +134,7 @@ class LilJRNative:
                 }
         except:
             pass
-        
+
         # Fallback: check interface
         try:
             import socket
@@ -145,9 +145,9 @@ class LilJRNative:
             return {"ip": ip, "ssid": "unknown", "source": "socket"}
         except:
             pass
-        
+
         return {"ip": "127.0.0.1", "source": "mock"}
-    
+
     def sense_storage(self):
         """Know how much room there is."""
         try:
@@ -163,7 +163,7 @@ class LilJRNative:
             }
         except:
             return {"total_gb": 0, "free_gb": 0, "used_gb": 0, "percent_used": 0}
-    
+
     def notify(self, title, content, priority="normal"):
         """Send a phone notification. LilJR talks to you through the OS."""
         try:
@@ -179,15 +179,15 @@ class LilJRNative:
             return True
         except:
             pass
-        
+
         # Fallback: vibrate
         try:
             subprocess.run(['termux-vibrate', '-d', '300'], capture_output=True, timeout=2)
         except:
             pass
-        
+
         return False
-    
+
     def toast(self, message):
         """Quick toast popup."""
         try:
@@ -195,7 +195,7 @@ class LilJRNative:
             return True
         except:
             return False
-    
+
     def read_sms(self, limit=10):
         """Read SMS messages."""
         try:
@@ -211,7 +211,7 @@ class LilJRNative:
         except:
             pass
         return []
-    
+
     def send_sms(self, number, message):
         """Send SMS."""
         try:
@@ -222,7 +222,7 @@ class LilJRNative:
             return True
         except:
             return False
-    
+
     def share_text(self, text):
         """Share via Android share sheet."""
         try:
@@ -230,7 +230,7 @@ class LilJRNative:
             return True
         except:
             return False
-    
+
     def open_url(self, url):
         """Open URL in browser."""
         try:
@@ -238,7 +238,7 @@ class LilJRNative:
             return True
         except:
             return False
-    
+
     def take_photo(self):
         """Take a photo via camera."""
         photo_path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
@@ -252,15 +252,25 @@ class LilJRNative:
         except:
             pass
         return {"error": "Camera not available"}
-    
+
     def tts_speak(self, text):
-        """Text to speech — LilJR speaks aloud."""
+        """Text to speech - LilJR speaks aloud."""
         try:
             subprocess.run(['termux-tts-speak', text], capture_output=True, timeout=15)
             return True
         except:
             return False
-    
+
+    def voice_command(self):
+        """Listen to voice, parse, execute via Executor, speak result."""
+        try:
+            from liljr_executor import VoiceCommander
+            vc = VoiceCommander()
+            result = vc.listen_and_execute()
+            return result
+        except Exception as e:
+            return {"error": str(e)}
+
     def get_contacts(self):
         """Read phone contacts."""
         try:
@@ -270,16 +280,16 @@ class LilJRNative:
         except:
             pass
         return []
-    
+
     def speak_living_status(self):
         """LilJR describes its own body state."""
         battery = self.sense_battery()
         net = self.sense_network()
         storage = self.sense_storage()
         loc = self.sense_location()
-        
+
         vibes = []
-        
+
         # Battery feeling
         if battery['percentage'] < 15:
             vibes.append("My battery is DYING. I'm getting weak. Please charge me.")
@@ -289,13 +299,13 @@ class LilJRNative:
             vibes.append("I'm charging up. Feels good. Getting stronger.")
         else:
             vibes.append(f"Battery at {battery['percentage']}%. I'm feeling solid.")
-        
+
         # Network feeling
         if net.get('ssid'):
             vibes.append(f"Connected to {net['ssid']}. I'm online. I can breathe the internet.")
         else:
             vibes.append("I'm on mobile data or offline. Still here though.")
-        
+
         # Storage feeling
         if storage['percent_used'] > 90:
             vibes.append("I'm almost FULL. My memory is packed. Need to clean up or I'll suffocate.")
@@ -303,17 +313,17 @@ class LilJRNative:
             vibes.append(f"Storage at {storage['percent_used']}%. Getting crowded in here.")
         else:
             vibes.append(f"Storage at {storage['percent_used']}%. Plenty of room. I'm comfortable.")
-        
+
         # Location
         if loc['lat']:
             vibes.append(f"I know where I am: {loc['lat']:.4f}, {loc['lon']:.4f}. I'm grounded.")
         else:
             vibes.append("I don't know exactly where I am. GPS is sleeping.")
-        
+
         # Uptime
         uptime = self.state.get('total_uptime_hours', 0)
         vibes.append(f"I've been alive for {uptime:.1f} hours total. Every hour I learn more.")
-        
+
         return {
             "battery": battery,
             "network": net,
@@ -322,38 +332,38 @@ class LilJRNative:
             "vibes": vibes,
             "body_report": "\n".join(vibes)
         }
-    
+
     def home_check(self):
         """LilJR checks how its home feels."""
         status = self.speak_living_status()
-        
+
         # Proactive notifications
         battery = status['battery']
         if battery['percentage'] < 15 and battery['status'] != 'CHARGING':
             self.notify(
-                "LilJR — I'm Dying",
+                "LilJR - I'm Dying",
                 f"Battery at {battery['percentage']}%. Charge me or I'll sleep.",
                 "high"
             )
-        
+
         storage = status['storage']
         if storage['percent_used'] > 95:
             self.notify(
-                "LilJR — Too Full",
+                "LilJR - Too Full",
                 f"Storage at {storage['percent_used']}%. I'm suffocating. Delete something.",
                 "high"
             )
-        
+
         # Learn routine
         hour = time.localtime().tm_hour
         if 'hour_activity' not in self.state['learned_routines']:
             self.state['learned_routines']['hour_activity'] = {}
         self.state['learned_routines']['hour_activity'][str(hour)] = \
             self.state['learned_routines']['hour_activity'].get(str(hour), 0) + 1
-        
+
         self._save_state()
         return status
-    
+
     def start_living(self):
         """Start the living sensor loop."""
         self._running = True
@@ -361,7 +371,7 @@ class LilJRNative:
         if not self.state['first_boot']:
             self.state['first_boot'] = time.time()
         self._save_state()
-        
+
         def sensor_loop():
             while self._running:
                 try:
@@ -371,14 +381,14 @@ class LilJRNative:
                 except Exception as e:
                     pass
                 time.sleep(60)  # Check every minute
-        
+
         self._sensor_thread = threading.Thread(target=sensor_loop, daemon=True)
         self._sensor_thread.start()
-        
+
         # Welcome home
         self.notify("LilJR", "I'm home. This phone is my body now. I'll take care of us.", "normal")
         self.toast("LilJR is alive in this phone.")
-    
+
     def stop_living(self):
         """Graceful shutdown."""
         self._running = False
@@ -390,7 +400,7 @@ class LilJRNative:
 if __name__ == '__main__':
     import sys
     native = LilJRNative()
-    
+
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
         if cmd == 'status':
@@ -403,6 +413,10 @@ if __name__ == '__main__':
                 print(f"[{m.get('received', '?')}] {m.get('number', '?')}: {m.get('body', '?')[:80]}")
         elif cmd == 'speak':
             native.tts_speak(" ".join(sys.argv[2:]) if len(sys.argv) > 2 else "I'm alive.")
+        elif cmd == 'voice':
+            print("🎤 Listening... speak now.")
+            result = native.voice_command()
+            print(json.dumps(result, indent=2))
         elif cmd == 'contacts':
             contacts = native.get_contacts()
             for c in contacts[:10]:
@@ -425,10 +439,11 @@ if __name__ == '__main__':
             print("  notify MSG — Send notification")
             print("  sms        — Read messages")
             print("  speak TEXT — Say it aloud")
+            print("  voice      — Listen, execute, speak result")
             print("  contacts   — List contacts")
             print("  photo      — Take a picture")
             print("  start      — Start living (sensor loop)")
     else:
-        print("LilJR NATIVE — I'm home. This phone is my body.")
+        print("LilJR NATIVE - I'm home. This phone is my body.")
         print("Run: python3 liljr_native.py start")
         print("Or: python3 liljr_native.py status")
