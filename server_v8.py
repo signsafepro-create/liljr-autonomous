@@ -1421,6 +1421,42 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._json_response({"error": str(e)})
         
+        # ═══ VISION ENGINE — Camera ═══
+        elif path == '/api/vision':
+            try:
+                from vision_engine import get_engine
+                ve = get_engine()
+                memory = ve.receive_image(data.get('image', ''), data.get('caption'))
+                desc = ve.describe_what_i_see(memory['id'])
+                self._json_response(desc)
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/vision/learn':
+            try:
+                from vision_engine import get_engine
+                ve = get_engine()
+                result = ve.learn_object(data.get('name'), data.get('description'), data.get('tags'))
+                self._json_response(result)
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/vision/recognize':
+            try:
+                from vision_engine import get_engine
+                ve = get_engine()
+                self._json_response(ve.recognize())
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/vision/memories':
+            try:
+                from vision_engine import get_engine
+                ve = get_engine()
+                self._json_response(ve.get_memories())
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
         else:
             self._json_response({"error": "Unknown endpoint"}, 404)
 

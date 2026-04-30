@@ -40,6 +40,44 @@
             -webkit-text-fill-color: transparent;
         }
         
+        .voice-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #888;
+        }
+        
+        .voice-toggle .switch {
+            width: 36px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .voice-toggle .switch.on {
+            background: #ff006e;
+        }
+        
+        .voice-toggle .switch::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        
+        .voice-toggle .switch.on::after {
+            left: 18px;
+        }
+        
         .status-dot {
             width: 8px;
             height: 8px;
@@ -173,9 +211,127 @@
             animation: mic-pulse 1s infinite;
         }
         
+        .cam-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #1a1a2e;
+            color: #00ff88;
+            border: 1px solid #333;
+        }
+        
+        .cam-btn:hover, .cam-btn:active {
+            background: #00ff88;
+            color: #0a0a0a;
+        }
+        
         @keyframes mic-pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
+        }
+        
+        /* Camera Modal */
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .camera-modal.active {
+            display: flex;
+        }
+        
+        .camera-preview {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 4/3;
+            background: #1a1a2e;
+            border-radius: 12px;
+            border: 1px solid #333;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .camera-preview video, .camera-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .camera-preview .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .camera-btn {
+            padding: 12px 24px;
+            border-radius: 24px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .camera-btn.capture {
+            background: #ff006e;
+            color: white;
+        }
+        
+        .camera-btn.cancel {
+            background: #333;
+            color: #ccc;
+        }
+        
+        .camera-btn.capture:hover {
+            transform: scale(1.05);
+        }
+        
+        .camera-caption {
+            margin-top: 16px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .camera-caption input {
+            width: 100%;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .camera-caption input::placeholder {
+            color: #666;
         }
         
         .send-btn {
@@ -266,8 +422,13 @@
     <div class="header">
         <h1>⚡ LilJR Command</h1>
         <div style="display:flex;gap:8px;align-items:center">
+            <div class="voice-toggle" onclick="toggleVoiceMode()">
+                <span>🎤</span>
+                <div class="switch" id="voiceSwitch"></div>
+            </div>
             <select id="personaSelect" onchange="switchPersona()" style="background:#1a1a2e;color:#fff;border:1px solid #333;border-radius:12px;padding:6px 12px;font-size:12px">
                 <option value="user">🔥 Boss (You)</option>
+                <option value="best_friend" selected>🤙 Homie (Best Friend)</option>
                 <option value="user_clean">✅ Boss (Clean)</option>
                 <option value="masculine">💪 Him</option>
                 <option value="feminine">💅 Her</option>
@@ -288,8 +449,8 @@
     
     <div class="chat-container" id="chatContainer">
         <div class="message bot">
-            Hey. I'm LilJR. Talk to me — build, fix, search, trade. I do what you ask.<br><br>
-            <span style="opacity:0.7">Try: "build me a dark website" or tap the mic 🎤</span>
+            Yooo! I'm LilJR, your ride or die. Talk to me like you talk to your homie — build shit, fix shit, show me what you see. I got you fam. 🤙<br><br>
+            <span style="opacity:0.7">Try: "build me a dark website" or tap 📸 to show me something</span>
             <div class="timestamp">Just now</div>
         </div>
     </div>
@@ -298,6 +459,12 @@
         <div class="input-wrapper">
             <input type="text" id="chatInput" placeholder="Tell LilJR what to build..." 
                    onkeypress="if(event.key==='Enter')sendMessage()">
+            <button class="cam-btn" id="camBtn" onclick="openCamera()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </button>
             <button class="mic-btn" id="micBtn" onclick="toggleVoice()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -313,6 +480,21 @@
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
         </button>
+    </div>
+    
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-preview" id="cameraPreview">
+            <div class="placeholder">📷 Tap capture to open camera</div>
+        </div>
+        <div class="camera-caption">
+            <input type="text" id="cameraCaption" placeholder="What am I looking at? (optional)" 
+                   onkeypress="if(event.key==='Enter')captureImage()">
+        </div>
+        <div class="camera-controls">
+            <button class="camera-btn cancel" onclick="closeCamera()">Cancel</button>
+            <button class="camera-btn capture" onclick="captureImage()">📸 Capture</button>
+        </div>
     </div>
     
     <script>
@@ -335,6 +517,11 @@
                 console.log('Persona switch failed:', e);
             }
         }
+        
+        // Set default persona on load
+        document.addEventListener('DOMContentLoaded', () => {
+            switchPersona();
+        });
         
         // Check server status
         async function checkStatus() {
@@ -403,6 +590,156 @@
                 recognition.stop();
             } else {
                 recognition.start();
+            }
+        }
+        
+        // Voice Mode Toggle (always listening vs push-to-talk)
+        let voiceMode = false; // off by default
+        function toggleVoiceMode() {
+            voiceMode = !voiceMode;
+            const sw = document.getElementById('voiceSwitch');
+            if (voiceMode) {
+                sw.classList.add('on');
+                addMessage('bot', '🎤 Voice mode ON. Tap the mic to talk, tap again to stop. Or just type when you want.', 'success');
+            } else {
+                sw.classList.remove('on');
+                if (isListening) {
+                    recognition.stop();
+                }
+                addMessage('bot', '⌨️ Voice mode OFF. Typing only now.', 'success');
+            }
+        }
+        
+        // Camera functions
+        let cameraStream = null;
+        let capturedImage = null;
+        
+        async function openCamera() {
+            const modal = document.getElementById('cameraModal');
+            const preview = document.getElementById('cameraPreview');
+            modal.classList.add('active');
+            
+            // Try to access camera
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'environment' }, 
+                        audio: false 
+                    });
+                    const video = document.createElement('video');
+                    video.srcObject = cameraStream;
+                    video.autoplay = true;
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.style.objectFit = 'cover';
+                    preview.innerHTML = '';
+                    preview.appendChild(video);
+                } else {
+                    // Fallback: file picker
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.capture = 'environment';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                capturedImage = event.target.result;
+                                const img = document.createElement('img');
+                                img.src = capturedImage;
+                                img.style.width = '100%';
+                                img.style.height = '100%';
+                                img.style.objectFit = 'cover';
+                                preview.innerHTML = '';
+                                preview.appendChild(img);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
+                }
+            } catch (e) {
+                preview.innerHTML = '<div class="placeholder">⚠️ Camera blocked. Use file picker instead.</div>';
+            }
+        }
+        
+        function closeCamera() {
+            const modal = document.getElementById('cameraModal');
+            modal.classList.remove('active');
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            capturedImage = null;
+            document.getElementById('cameraPreview').innerHTML = '<div class="placeholder">📷 Tap capture to open camera</div>';
+            document.getElementById('cameraCaption').value = '';
+        }
+        
+        async function captureImage() {
+            const preview = document.getElementById('cameraPreview');
+            const caption = document.getElementById('cameraCaption').value.trim();
+            
+            // If we have a live stream, capture from video
+            if (cameraStream && preview.querySelector('video')) {
+                const video = preview.querySelector('video');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                capturedImage = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // Show captured image
+                const img = document.createElement('img');
+                img.src = capturedImage;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                preview.innerHTML = '';
+                preview.appendChild(img);
+            }
+            
+            if (!capturedImage) {
+                addMessage('bot', 'No image captured. Try again.', 'error');
+                return;
+            }
+            
+            // Close modal and show in chat
+            closeCamera();
+            addMessage('user', `📸 [Image sent]${caption ? ': ' + caption : ''}`);
+            addTyping();
+            
+            // Send to server
+            try {
+                const res = await fetch(`${API_BASE}/api/vision`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({image: capturedImage, caption: caption})
+                });
+                
+                const data = await res.json();
+                removeTyping();
+                
+                if (data.error) {
+                    addMessage('bot', `Vision error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                addMessage('bot', data.response || '👀 I see it. What else you got?', 'success');
+                
+                // If user captioned it, automatically learn it
+                if (caption) {
+                    await fetch(`${API_BASE}/api/vision/learn`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({name: caption.split()[0] || 'object', description: caption})
+                    });
+                }
+                
+            } catch (e) {
+                removeTyping();
+                addMessage('bot', `Couldn't process image: ${e.message}`, 'error');
             }
         }
         

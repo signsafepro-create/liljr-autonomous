@@ -415,6 +415,35 @@ def main():
             print('')
             print('Available: user, masculine, feminine, professional, andre')
 
+    # ═══ VISION ENGINE — Camera ═══
+    elif cmd == 'vision':
+        from vision_engine import get_engine
+        ve = get_engine()
+        if len(sys.argv) > 2:
+            sub = sys.argv[2]
+            if sub == 'recognize':
+                print(json.dumps(ve.recognize(), indent=2))
+            elif sub == 'describe':
+                print(json.dumps(ve.describe_what_i_see(), indent=2))
+            elif sub == 'learn' and len(sys.argv) > 4:
+                print(json.dumps(ve.learn_object(sys.argv[3], sys.argv[4]), indent=2))
+            elif sub == 'memories':
+                print(json.dumps(ve.get_memories(), indent=2))
+            else:
+                print("VISION — Show me what you see:")
+                print('  vision recognize — What I know')
+                print('  vision describe — What I see now')
+                print('  vision learn NAME DESCRIPTION — Teach me')
+                print('  vision memories — All visual memories')
+        else:
+            print("VISION — Show me what you see:")
+            print('  vision recognize')
+            print('  vision describe')
+            print('  vision learn NAME DESCRIPTION')
+            print('  vision memories')
+            print('')
+            print('In the web app: tap 📸 to open camera')
+    
     # ═══ HELP ═══
     elif cmd in ('help', ''):
         print_help()
@@ -519,15 +548,22 @@ QUICKFIRE — Fast. Smart. Witty.:
   python3 ~/lj_empire.py qf buy AAPL 5
   python3 ~/lj_empire.py qf chat "make it cyberpunk"
 
+VISION — Camera. Show me what you see.:
+  python3 ~/lj_empire.py vision recognize — What I know
+  python3 ~/lj_empire.py vision describe — What I see now
+  python3 ~/lj_empire.py vision learn NAME DESCRIPTION — Teach me
+  python3 ~/lj_empire.py vision memories — All visual memories
+
 PERSONA — Switch Voices. Be Anyone.:
   python3 ~/lj_empire.py persona list
-  python3 ~/lj_empire.py persona switch user        — Your raw voice
-  python3 ~/lj_empire.py persona switch masculine   — Him
-  python3 ~/lj_empire.py persona switch feminine    — Her
+  python3 ~/lj_empire.py persona switch best_friend — Your ride or die (default)
+  python3 ~/lj_empire.py persona switch user — Your raw voice
+  python3 ~/lj_empire.py persona switch masculine — Him
+  python3 ~/lj_empire.py persona switch feminine — Her
   python3 ~/lj_empire.py persona switch professional — Clean/pro
-  python3 ~/lj_empire.py persona switch andre       — Me
-  python3 ~/lj_empire.py persona speak              — Test voice
-  python3 ~/lj_empire.py persona train "your text"  — Teach new words
+  python3 ~/lj_empire.py persona switch andre — Me
+  python3 ~/lj_empire.py persona speak — Test voice
+  python3 ~/lj_empire.py persona train "your text" — Teach new words
     """)
 
 if __name__ == '__main__':
