@@ -34,13 +34,33 @@ def main():
     # ═══ SERVER ═══
     if cmd == 'start':
         print("🚀 Starting LilJR Empire v8.0...")
-        os.system("pkill -f 'server_v8.py' 2>/dev/null; sleep 1; nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
+        # Kill ALL old servers aggressively
+        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null; pkill -f 'server.py' 2>/dev/null")
         import time; time.sleep(2)
-        print(json.dumps(api_get('/api/empire'), indent=2))
+        # Start fresh
+        os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
+        time.sleep(3)
+        health = api_get('/api/health')
+        if 'version' not in health:
+            print("⚠️ Server not responding. Retrying...")
+            os.system("pkill -f 'python.*8000' 2>/dev/null")
+            time.sleep(1)
+            os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
+            time.sleep(3)
+            health = api_get('/api/health')
+        print(json.dumps(health, indent=2))
     
     elif cmd == 'stop':
-        os.system("pkill -f 'server_v8.py'")
-        print("Stopped.")
+        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null")
+        print("Stopped all servers.")
+    
+    elif cmd == 'restart':
+        print("🔄 Restarting...")
+        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null")
+        import time; time.sleep(2)
+        os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
+        time.sleep(3)
+        print(json.dumps(api_get('/api/health'), indent=2))
     
     elif cmd == 'status':
         print(json.dumps(api_get('/api/health'), indent=2))
