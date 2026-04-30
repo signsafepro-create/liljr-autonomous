@@ -120,8 +120,11 @@ with open('$HOME/liljr_state.json', 'w') as f:
     python3 ~/liljr-autonomous/intel_hub.py "$@"
     ;;
   # ═══════════════════════════════════════════════════════════════
-  # COMMAND CENTER — Talk to it, it does everything
+  # STEALTH MODE — Invisible development
   # ═══════════════════════════════════════════════════════════════
+  stealth)
+    python3 ~/liljr-autonomous/stealth_mode.py "$1"
+    ;;
   cc)
     python3 ~/liljr-autonomous/command_center.py "$@"
     ;;
@@ -321,6 +324,13 @@ with open('$HOME/liljr_state.json', 'w') as f:
     echo "  bash ~/lj intel summarize 'bitcoin'   — Intelligence summary"
     echo "  bash ~/lj intel monitor               — Continuous monitoring"
     echo "  bash ~/lj intel stats                 — Intelligence stats"
+    echo ""
+    echo "STEALTH MODE:"
+    echo "  bash ~/lj stealth enable    — Enable invisible mode"
+    echo "  bash ~/lj stealth disable   — Disable stealth"
+    echo "  bash ~/lj stealth status    — Check stealth status"
+    echo "  bash ~/lj stealth scramble  — Wipe all logs"
+    echo "  bash ~/lj stealth private   — Make GitHub private"
     echo ""
     echo "MEMORY ENGINE:"
     echo "  bash ~/lj memory 'what was my last trade'   — Query memory"
