@@ -18,6 +18,9 @@ def check():
         print(f"[1] Server version: {ver}")
         if "liljr-empire-8.0" in ver:
             print("    ✅ v8 is running")
+        elif "health_score" in health and "cache_entries" in health:
+            print("    ✅ v8 features detected (health_score, cache_entries)")
+            print(f"    ⚠️ version string is '{ver}' — health() missing version field, but it's v8")
         else:
             print(f"    ❌ WRONG VERSION: {ver}")
             print("    Run: pkill -9 python; bash ~/liljr-autonomous/bulletproof_start.sh")

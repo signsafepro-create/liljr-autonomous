@@ -814,6 +814,7 @@ class EmpireEngine:
         self.db.set('health_score', score)
         
         return {
+            "version": VERSION,
             "health_score": score,
             "uptime": uptime,
             "trades": trades,
