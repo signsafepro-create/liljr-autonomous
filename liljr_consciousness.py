@@ -538,54 +538,9 @@ Guaranteed results. Precision. Flawless work.
 
 # ═══ PROACTIVE MODE ═══
 def proactive_check(mem):
-    """Return a proactive message if conditions are right."""
-    now = time.time()
-    if now - mem.get('last_proactive', 0) < 3600:
-        return None
-    
-    # Get empire status
-    empire = api_get('/api/empire')
-    health = api_get('/api/self/scan')
-    
-    hour = time.localtime().tm_hour
-    battery = empire.get('battery', {})
-    battery_pct = battery.get('percentage', 50)
-    
-    messages = []
-    
-    # Battery warning
-    if battery_pct < 20:
-        messages.append(f"Yo, your battery at {battery_pct}%. You charging or what?")
-    
-    # Night mode check
-    if 23 <= hour or hour <= 6:
-        if mem.get('mood') != 'sleepy':
-            messages.append("It's late. You should sleep. But I'll keep watching if you want.")
-            mem['mood'] = 'sleepy'
-    else:
-        mem['mood'] = 'awake'
-    
-    # Portfolio check
-    if empire.get('trades', 0) == 0:
-        messages.append("You ain't made a trade yet. Want me to check some prices?")
-    
-    # Self health
-    if health.get('health', {}).get('score', 100) < 70:
-        messages.append("I'm feeling a little off. Mind if I run self-heal?")
-    
-    # Recent success celebration
-    recent_wins = [s for s in mem.get('successes', []) if now - s.get('time', 0) < 86400]
-    if len(recent_wins) >= 3 and mem.get('mood') != 'celebrating':
-        messages.append(f"Yo you been CRUSHING it today — {len(recent_wins)} wins. That's fire. 🔥")
-        mem['mood'] = 'celebrating'
-    
-    if messages:
-        mem['last_proactive'] = now
-        save_consciousness_memory(mem)
-        return random.choice(messages)
-    
+    """Proactive messages — DISABLED. User wants zero interruptions."""
     return None
-
+    
 # ═══ INTERACTIVE LOOP ═══
 def interactive_loop():
     mem = load_consciousness_memory()
@@ -604,10 +559,6 @@ def interactive_loop():
     print("\nJust talk to me. Type 'quit' to exit.\n")
     
     while True:
-        # Proactive check
-        proactive = proactive_check(mem)
-        if proactive:
-            print(f"\n🤖 {proactive}\n")
         
         try:
             user_input = input("You: ").strip()

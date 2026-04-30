@@ -890,7 +890,25 @@ class Handler(BaseHTTPRequestHandler):
             pass
         return {}
     
+    def _crash_shield(self, handler_func):
+        """Wrap endpoint so one crash doesn't kill the whole server."""
+        try:
+            handler_func()
+        except Exception as e:
+            err = traceback.format_exc()
+            print(f"[CRASH SHIELD] {self.path}: {str(e)[:120]}")
+            try:
+                self._json_response({"error": f"Shielded: {str(e)[:80]}", "shielded": True}, 500)
+            except:
+                pass
+    
     def do_GET(self):
+        self._crash_shield(self._do_GET)
+    
+    def do_POST(self):
+        self._crash_shield(self._do_POST)
+    
+    def _do_GET(self):
         path = self.path
         
         # ═══ STATIC FILES ═══
