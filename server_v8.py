@@ -14,17 +14,50 @@ from socketserver import ThreadingMixIn
 # ═══════════════════════════════════════════════════════════════
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Independent imports — one fails, others still load
 try:
     from auto_coder import AutoCoder
-    from marketing_engine import MarketingEngine
-    from deep_search import DeepSearch
-    from self_awareness_v2 import SelfAwareness
-    from autonomous_loop import AutonomousLoop
-    from web_builder_v2 import WebBuilderV2
-    AUTONOMOUS_AVAILABLE = True
+    AUTONOMOUS_CODER = True
 except Exception as e:
-    AUTONOMOUS_AVAILABLE = False
-    print(f"[EMPIRE] Autonomous modules not available: {e}")
+    AUTONOMOUS_CODER = False
+    print(f"[EMPIRE] AutoCoder not available: {e}")
+
+try:
+    from marketing_engine import MarketingEngine
+    AUTONOMOUS_MARKETING = True
+except Exception as e:
+    AUTONOMOUS_MARKETING = False
+    print(f"[EMPIRE] Marketing not available: {e}")
+
+try:
+    from deep_search import DeepSearch
+    AUTONOMOUS_SEARCH = True
+except Exception as e:
+    AUTONOMOUS_SEARCH = False
+    print(f"[EMPIRE] DeepSearch not available: {e}")
+
+try:
+    from self_awareness_v2 import SelfAwareness
+    AUTONOMOUS_AWARENESS = True
+except Exception as e:
+    AUTONOMOUS_AWARENESS = False
+    print(f"[EMPIRE] SelfAwareness not available: {e}")
+
+try:
+    from autonomous_loop import AutonomousLoop
+    AUTONOMOUS_LOOP = True
+except Exception as e:
+    AUTONOMOUS_LOOP = False
+    print(f"[EMPIRE] AutonomousLoop not available: {e}")
+
+try:
+    from web_builder_v2 import WebBuilderV2
+    AUTONOMOUS_WEB = True
+except Exception as e:
+    AUTONOMOUS_WEB = False
+    print(f"[EMPIRE] WebBuilder not available: {e}")
+
+AUTONOMOUS_AVAILABLE = any([AUTONOMOUS_CODER, AUTONOMOUS_MARKETING, AUTONOMOUS_SEARCH, AUTONOMOUS_AWARENESS, AUTONOMOUS_LOOP, AUTONOMOUS_WEB])
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
@@ -382,23 +415,14 @@ class EmpireEngine:
         self._backup_thread = threading.Thread(target=self._auto_backup, daemon=True)
         self._backup_thread.start()
         
-        # Autonomous modules
-        if AUTONOMOUS_AVAILABLE:
-            self.coder = AutoCoder('~/liljr-autonomous')
-            self.marketing = MarketingEngine()
-            self.search = DeepSearch()
-            self.awareness = SelfAwareness('~/liljr-autonomous')
-            self.web_builder = WebBuilderV2('~/liljr-autonomous/web')
-            self.autonomous = None  # Started on demand
-            self.db.log('INFO', f'Empire Engine v8.0 started with autonomous modules', 'core')
-        else:
-            self.coder = None
-            self.marketing = None
-            self.search = None
-            self.awareness = None
-            self.web_builder = None
-            self.autonomous = None
-            self.db.log('INFO', f'Empire Engine v8.0 started (no autonomous modules)', 'core')
+        # Autonomous modules — independent loading
+        self.coder = AutoCoder('~/liljr-autonomous') if AUTONOMOUS_CODER else None
+        self.marketing = MarketingEngine() if AUTONOMOUS_MARKETING else None
+        self.search = DeepSearch() if AUTONOMOUS_SEARCH else None
+        self.awareness = SelfAwareness('~/liljr-autonomous') if AUTONOMOUS_AWARENESS else None
+        self.web_builder = WebBuilderV2('~/liljr-autonomous/web') if AUTONOMOUS_WEB else None
+        self.autonomous = None  # Started on demand
+        self.db.log('INFO', f'Empire Engine v8.0 started', 'core')
     
     # ─── PERSISTENCE ───
     def _auto_save(self):
