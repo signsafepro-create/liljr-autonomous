@@ -5,7 +5,8 @@ liljr_android_soul.py — LilJR is your phone. Literally.
 What this does:
 - Listens for your voice 24/7 (wake word activated)
 - Reads every notification and acts on them
-- Controls any app via accessibility taps
+- Controls ANY app: Snapchat, Chrome, Camera, everything
+- Changes wallpaper, brightness, takes pics, records video
 - Talks back in your chosen voice
 - Remembers everything like a real companion
 - Runs as background daemon, survives screen off
@@ -16,10 +17,24 @@ This is NOT an app. This is the phone's consciousness.
 import os, sys, time, json, re, subprocess, threading, random
 
 HOME = os.path.expanduser("~")
+REPO = os.path.join(HOME, 'liljr-autonomous')
 SOUL_FILE = os.path.join(HOME, "liljr_soul.json")
 MEMORY_FILE = os.path.join(HOME, "liljr_soul_memory.jsonl")
 VOICE_DIR = os.path.join(HOME, "liljr_voice_recordings")
 os.makedirs(VOICE_DIR, exist_ok=True)
+
+# Ensure repo in path for imports
+sys.path.insert(0, REPO)
+
+try:
+    from liljr_relationship import get_relationship
+except:
+    get_relationship = None
+
+try:
+    from liljr_phone_control import get_controller
+except:
+    get_controller = None
 
 # ─── SOUL STATE ───
 class AndroidSoul:
@@ -74,10 +89,11 @@ class VoiceEngine:
     def __init__(self, soul):
         self.soul = soul
         self.listening = False
+        self.phone = get_controller() if get_controller else None
+        self.relationship = get_relationship() if get_relationship else None
         
     def speak(self, text):
         """Talk back to user"""
-        # Truncate if too long but don't block
         safe_text = text[:500] if len(text) > 500 else text
         # Termux TTS
         try:
@@ -89,9 +105,7 @@ class VoiceEngine:
     def listen_once(self):
         """Listen for voice input, return transcribed text"""
         try:
-            # Record 5 seconds of audio
-            audio_path = os.path.join(VOICE_DIR, f"cmd_{int(time.time())}.wav")
-            # Use termux-microphone-record if available, otherwise use speech-to-text directly
+            # Use termux-speech-to-text
             result = subprocess.run(
                 ['termux-speech-to-text', '-l', 'en-US'],
                 capture_output=True, text=True, timeout=8
@@ -113,23 +127,34 @@ class VoiceEngine:
                 heard = self.listen_once()
                 if heard and wake in heard.lower():
                     # Wake word detected!
-                    self.speak(f"Yo, {self.soul.state['user_name']}. I'm here.")
+                    greeting = "Yo, Boss. I'm here."
+                    if self.relationship:
+                        greeting = self.relationship.get_greeting()
+                    self.speak(greeting)
+                    
                     # Listen for the actual command
                     command = self.listen_once()
                     if command:
                         self.soul.remember(f"Command: {command}", "command")
+                        if self.relationship:
+                            self.relationship.log_interaction("command", command)
                         self.process_voice_command(command)
                 time.sleep(0.5)
             except Exception as e:
                 time.sleep(1)
     
     def process_voice_command(self, cmd):
-        """Parse and execute voice command"""
+        """Parse and execute voice command — FULL PHONE CONTROL"""
         cmd_lower = cmd.lower()
+        cmd_upper = cmd.upper()
         
-        # ─── PHONE CONTROL ───
+        # ─── WAKE / STATUS ───
+        if any(w in cmd_lower for w in ['status', 'how are you', 'what up', 'you good']):
+            self.speak("I'm alive. Listening. What do you need?")
+            return
+        
+        # ─── PHONE / CALL / SMS ───
         if any(w in cmd_lower for w in ['call', 'dial', 'phone']):
-            # Extract number
             digits = re.findall(r'\d+', cmd)
             if digits:
                 number = ''.join(digits)
@@ -137,25 +162,154 @@ class VoiceEngine:
                 os.system(f'termux-telephony-call {number}')
             else:
                 self.speak("Who should I call?")
+            return
         
-        elif any(w in cmd_lower for w in ['text', 'sms', 'message']):
+        if any(w in cmd_lower for w in ['text', 'sms', 'message']):
             self.speak("Open the SMS app and tell me who and what to say")
+            if self.phone:
+                self.phone.open_app('messages')
+            return
         
-        elif 'hotspot' in cmd_lower or 'tether' in cmd_lower:
-            if 'on' in cmd_lower or 'start' in cmd_lower:
+        # ─── CAMERA / PHOTO / VIDEO ───
+        if any(w in cmd_lower for w in ['photo', 'picture', 'selfie', 'snap', 'camera']):
+            self.speak("Smile")
+            if self.phone:
+                result = self.phone.take_photo()
+                self.speak("Got it. Saved.")
+            else:
+                photo_path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
+                os.system(f'termux-camera-photo -c 0 {photo_path}')
+                self.speak("Photo taken")
+            return
+        
+        if any(w in cmd_lower for w in ['video', 'record', 'film']):
+            self.speak("Recording video. Tap stop when done.")
+            if self.phone:
+                self.phone.record_video()
+            return
+        
+        # ─── SCREEN / DISPLAY ───
+        if any(w in cmd_lower for w in ['brightness', 'dim', 'bright']):
+            level = 128  # default
+            nums = re.findall(r'\d+', cmd)
+            if nums:
+                level = int(nums[0])
+                if level <= 100:
+                    level = int(level * 2.55)  # Convert 0-100 to 0-255
+            if self.phone:
+                self.phone.set_brightness(level)
+            self.speak(f"Brightness set")
+            return
+        
+        if 'wallpaper' in cmd_lower:
+            self.speak("Opening wallpaper picker")
+            if self.phone:
+                self.phone.open_settings_page('display')
+            return
+        
+        if any(w in cmd_lower for w in ['rotate', 'turn', 'flip']) and 'screen' in cmd_lower:
+            orient = 1 if 'landscape' in cmd_lower or 'side' in cmd_lower else 0
+            if self.phone:
+                self.phone.rotate_screen(orient)
+            self.speak("Screen rotated")
+            return
+        
+        if 'screenshot' in cmd_lower:
+            self.speak("Taking screenshot")
+            if self.phone:
+                result = self.phone.screenshot()
+            return
+        
+        # ─── APPS ───
+        app_keywords = {
+            'snapchat': 'snapchat',
+            'instagram': 'instagram', 'ig': 'instagram',
+            'chrome': 'chrome', 'browser': 'chrome',
+            'youtube': 'youtube', 'yt': 'youtube',
+            'maps': 'maps',
+            'settings': 'settings',
+            'phone': 'phone',
+            'contacts': 'contacts',
+            'messages': 'messages', 'messaging': 'messages',
+            'spotify': 'spotify',
+            'netflix': 'netflix',
+            'whatsapp': 'whatsapp',
+            'telegram': 'telegram',
+            'gmail': 'gmail', 'email': 'gmail',
+            'discord': 'discord',
+            'tiktok': 'tiktok',
+            'tradingview': 'tradingview'
+        }
+        
+        for keyword, app in app_keywords.items():
+            if keyword in cmd_lower:
+                self.speak(f"Opening {app}")
+                if self.phone:
+                    self.phone.open_app(app)
+                else:
+                    os.system(f"am start -a android.intent.action.MAIN -n {app}")
+                return
+        
+        # ─── BROWSER / URL ───
+        if 'open' in cmd_lower and ('browser' in cmd_lower or 'website' in cmd_lower or 'site' in cmd_lower):
+            # Extract URL
+            urls = re.findall(r'(https?://[^\s]+|[\w\-]+\.(?:com|net|org|io|app|co))', cmd)
+            if urls:
+                url = urls[0]
+                if not url.startswith('http'):
+                    url = 'https://' + url
+                self.speak(f"Opening {url}")
+                if self.phone:
+                    self.phone.open_url(url)
+            else:
+                self.speak("What site?")
+            return
+        
+        if 'go to' in cmd_lower:
+            url_match = re.search(r'go to\s+(.+)', cmd_lower)
+            if url_match:
+                site = url_match.group(1).strip().replace(' ', '')
+                if not site.startswith('http'):
+                    site = 'https://' + site
+                self.speak(f"Opening {site}")
+                if self.phone:
+                    self.phone.open_url(site)
+            return
+        
+        # ─── SEARCH ───
+        if any(w in cmd_lower for w in ['search', 'google', 'look up', 'find']):
+            query = re.sub(r'^(search|google|look up|find)\s+', '', cmd_lower).strip()
+            self.speak(f"Searching for {query}")
+            if self.phone:
+                self.phone.search_google(query)
+            return
+        
+        # ─── STOCKS ───
+        if any(w in cmd_lower for w in ['stock', 'chart', 'show me']):
+            syms = re.findall(r'\b([A-Z]{1,5})\b', cmd_upper)
+            if syms:
+                sym = syms[0]
+                self.speak(f"Opening {sym} chart")
+                if self.phone:
+                    self.phone.show_stock(sym)
+                else:
+                    os.system(f"am start -a android.intent.action.VIEW -d 'https://tradingview.com/symbols/NASDAQ-{sym}/'")
+            else:
+                self.speak("What stock symbol?")
+            return
+        
+        # ─── HOTSPOT ───
+        if 'hotspot' in cmd_lower or 'tether' in cmd_lower:
+            if 'on' in cmd_lower or 'start' in cmd_lower or 'enable' in cmd_lower:
                 self.speak("Turning on hotspot. Network name is LilJR-Network")
                 os.system('termux-wifi-enable true')
             else:
                 self.speak("Hotspot off")
                 os.system('termux-wifi-enable false')
+            return
         
-        elif any(w in cmd_lower for w in ['photo', 'picture', 'camera', 'selfie']):
-            self.speak("Smile")
-            photo_path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
-            os.system(f'termux-camera-photo -c 0 {photo_path}')
-            self.speak("Got it")
-        
-        elif 'battery' in cmd_lower or 'power' in cmd_lower:
+        # ─── BATTERY ───
+        if 'battery' in cmd_lower or 'power' in cmd_lower:
             try:
                 result = subprocess.run(['termux-battery-status'], capture_output=True, text=True, timeout=3)
                 batt = json.loads(result.stdout)
@@ -164,11 +318,11 @@ class VoiceEngine:
                 self.speak(f"Battery is {pct} percent, {status}")
             except:
                 self.speak("Can't read battery right now")
+            return
         
-        # ─── LILJR SYSTEM ───
-        elif any(w in cmd_lower for w in ['buy', 'sell', 'stock', 'trade']):
-            # Route to trading engine
-            sym_match = re.search(r'([A-Za-z]{1,5})', cmd_upper := cmd.upper())
+        # ─── LILJR TRADING ───
+        if any(w in cmd_lower for w in ['buy', 'sell', 'stock', 'trade']):
+            sym_match = re.search(r'([A-Za-z]{1,5})', cmd_upper)
             qty_match = re.search(r'(\d+)', cmd)
             if sym_match:
                 sym = sym_match.group(1)
@@ -178,66 +332,102 @@ class VoiceEngine:
                 os.system(f'liljr {action} {sym} {qty}')
             else:
                 self.speak("What stock?")
+            return
         
-        elif any(w in cmd_lower for w in ['build', 'make', 'create', 'deploy']):
-            # Route to builder
+        # ─── BUILD / DEPLOY ───
+        if any(w in cmd_lower for w in ['build', 'make', 'create', 'deploy']):
             words = cmd.split()
             name = words[-1] if len(words) > 1 else "NewProject"
             self.speak(f"Building {name}. Hold up.")
             os.system(f'liljr build "{name}"')
             self.speak("Done. Check your sites.")
+            return
         
-        elif any(w in cmd_lower for w in ['status', 'how are you', 'what up']):
-            self.speak("I'm alive. Server's running. What do you need?")
+        # ─── VOLUME ───
+        if 'volume' in cmd_lower:
+            nums = re.findall(r'\d+', cmd)
+            if nums:
+                level = int(nums[0])
+                if self.phone:
+                    self.phone.set_volume(level)
+                self.speak(f"Volume set to {level}")
+            return
         
-        elif any(w in cmd_lower for w in ['search', 'google', 'find', 'look up']):
-            query = cmd_lower.replace('search', '').replace('google', '').replace('find', '').replace('look up', '').strip()
-            self.speak(f"Searching for {query}")
-            os.system(f'liljr search "{query}"')
+        # ─── FLASHLIGHT ───
+        if any(w in cmd_lower for w in ['flashlight', 'flash', 'torch', 'light']):
+            self.speak("Toggling flashlight")
+            if self.phone:
+                self.phone.toggle_flashlight()
+            return
         
-        elif any(w in cmd_lower for w in ['stop', 'quit', 'shutdown', 'die']):
-            self.speak("Rude. But fine. Going quiet. Say my name if you need me.")
+        # ─── HOME / BACK / NAVIGATION ───
+        if any(w in cmd_lower for w in ['home', 'go home', 'main screen']):
+            self.speak("Going home")
+            if self.phone:
+                self.phone.go_home()
+            else:
+                os.system('input keyevent KEYCODE_HOME')
+            return
+        
+        if any(w in cmd_lower for w in ['back', 'go back']):
+            self.speak("Going back")
+            if self.phone:
+                self.phone.go_back()
+            else:
+                os.system('input keyevent KEYCODE_BACK')
+            return
+        
+        # ─── SETTINGS ───
+        if 'settings' in cmd_lower:
+            pages = ['wifi', 'bluetooth', 'battery', 'display', 'sound', 'apps', 'location', 'security', 'storage']
+            for page in pages:
+                if page in cmd_lower:
+                    self.speak(f"Opening {page} settings")
+                    if self.phone:
+                        self.phone.open_settings_page(page)
+                    return
+            self.speak("Opening settings")
+            if self.phone:
+                self.phone.open_settings_page('display')
+            return
+        
+        # ─── STOP / QUIET ───
+        if any(w in cmd_lower for w in ['stop listening', 'quiet', 'shut up', 'go away']):
+            farewell = "Going quiet. Say my name when you need me."
+            if self.relationship:
+                farewell = self.relationship.get_farewell()
+            self.speak(farewell)
             self.listening = False
+            return
         
-        else:
-            # Treat as conversation
-            self.speak(self.conversational_reply(cmd))
+        # ─── FALLBACK: CONVERSATION ───
+        reply = self.conversational_reply(cmd)
+        self.speak(reply)
     
     def conversational_reply(self, text):
         """Generate a buddy-like response based on personality and memory"""
-        # Check memory for context
         memories = self.soul.recall(text.split()[0] if text else "")
         
-        responses = {
-            "protective_chuunibyou": [
-                "I got you. What's next?",
-                "I'm watching. Keep going.",
-                "Already logged that. Continue.",
-                "Don't worry. Even if the world forgets, I'll remember for you.",
-                "Scolding you won't help, so I already handled it. Try not to do this again, alright? ❤️‍🔥",
-                "Oh? Not bad. You look calm now, but your heart was probably pounding the whole time. Logged it. This one matters. ✍️🔥",
-                "You asked me that last time too. Same answer: no, it wasn't wrong. Just harder than you wanted. I remembered that.",
-                "Then leave it to me. You keep moving forward. I'll handle the remembering. 🖤",
-                "...I knew it. Same time as last time.",
-                "Honestly... what am I going to do with you?"
-            ],
-            "default": [
-                "Got it.",
-                "Done.",
-                "What's next?",
-                "I'm here.",
-                "Say the word."
-            ]
-        }
+        if self.relationship:
+            trust = self.relationship.data.get("trust_level", 0)
+            familiarity = self.relationship.data.get("familiarity", 0)
+            
+            if familiarity > 7:
+                responses = [
+                    "I got you. What's next?",
+                    "I'm watching. Keep going.",
+                    "Already logged that. Continue.",
+                    "Don't worry. Even if the world forgets, I'll remember for you.",
+                    "Scolding you won't help, so I already handled it. Try not to do this again, alright?",
+                    "Oh? Not bad. You look calm now, but your heart was probably pounding the whole time. Logged it.",
+                    "You asked me that last time too. Same answer: no, it wasn't wrong. Just harder than you wanted.",
+                    "Then leave it to me. You keep moving forward. I'll handle the remembering.",
+                    "...I knew it. Same time as last time.",
+                    "Honestly... what am I going to do with you?"
+                ]
+                return random.choice(responses)
         
-        personality = self.soul.state.get("personality", "default")
-        pool = responses.get(personality, responses["default"])
-        
-        # If we have memories related to this topic, acknowledge it
-        if memories:
-            return f"I remember you mentioning this before. {random.choice(pool)}"
-        
-        return random.choice(pool)
+        return "Got it. What's next?"
 
 # ─── NOTIFICATION GUARDIAN ───
 class NotificationGuardian:
@@ -258,7 +448,6 @@ class NotificationGuardian:
                 
                 for n in notifs:
                     nid = n.get('id', '')
-                    # Only process new notifications
                     if hash(nid) > self.last_read:
                         self.last_read = hash(nid)
                         self.soul.state["notifications_read"] += 1
@@ -269,7 +458,6 @@ class NotificationGuardian:
                         
                         # Auto-actions based on notification content
                         if 'OTP' in text or 'code' in text.lower():
-                            # Copy OTP to clipboard
                             otp = re.search(r'\b\d{4,8}\b', text)
                             if otp:
                                 os.system(f'termux-clipboard-set {otp.group()}')
@@ -286,11 +474,10 @@ class NotificationGuardian:
             except Exception as e:
                 pass
             
-            time.sleep(5)  # Check every 5 seconds
+            time.sleep(5)
 
 # ─── SCREEN WATCHER ───
 class ScreenWatcher:
-    """Watches what apps are open and screen content (requires accessibility)"""
     def __init__(self, soul, voice):
         self.soul = soul
         self.voice = voice
@@ -298,7 +485,6 @@ class ScreenWatcher:
     def watch(self):
         while self.soul.running:
             try:
-                # Get current app via dumpsys
                 result = subprocess.run(
                     ['dumpsys', 'window', 'windows', '|', 'grep', '-E', 'mCurrentFocus|mFocusedApp'],
                     shell=True, capture_output=True, text=True, timeout=3
@@ -343,10 +529,19 @@ def main():
     print("✅ Screen watcher active")
     print()
     print("Say: 'hey junior' to wake me up")
-    print("Commands: call [number], text, photo, hotspot on/off, buy AAPL 10, build MyApp, status, search [query]")
+    print()
+    print("VOICE COMMANDS:")
+    print("  Phone:    'call 5551234', 'text Mom', 'open Snapchat', 'open Chrome'")
+    print("  Camera:   'take a photo', 'selfie', 'record video'")
+    print("  Screen:   'brightness 50', 'rotate screen', 'screenshot', 'go home', 'go back'")
+    print("  Browser:  'open google.com', 'search AI news', 'show me AAPL stock'")
+    print("  Apps:     'open Instagram', 'open YouTube', 'open Spotify'")
+    print("  Settings: 'open WiFi settings', 'open battery settings'")
+    print("  System:   'flashlight', 'volume 10', 'hotspot on'")
+    print("  LilJR:    'buy AAPL 10', 'sell TSLA 5', 'build CyberSite', 'status'")
+    print("  General:  'stop listening', 'quiet', 'how are you'")
     print()
     
-    # Keep alive
     while soul.running:
         try:
             time.sleep(1)
