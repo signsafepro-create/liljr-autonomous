@@ -110,8 +110,12 @@ class VoiceEngine:
             return None
     
     def is_wake_word(self, text):
-        """Check if text contains wake word"""
+        """Check if text contains wake word or sleep command"""
         text_lower = text.lower()
+        # Also check for sleep commands when idle (user might say "that's enough" without wake word)
+        sleep_phrases = ['quiet', 'shut up', 'go away', 'sleep', 'later', 'bye', 'stop', "that's enough", 'enough', 'done']
+        if any(p in text_lower for p in sleep_phrases):
+            return True  # Will be handled as sleep command
         return any(wake in text_lower for wake in WAKE_WORDS)
     
     def greeting(self):
@@ -129,7 +133,13 @@ class VoiceEngine:
     def farewell(self):
         if RELATIONSHIP:
             return RELATIONSHIP.get_farewell()
-        return "Aight. Holler when you need me."
+        farewells = [
+            "Aight. Holler when you need me.",
+            "Done. I'm here when you want me.",
+            "Got it. Going quiet.",
+            "Aight. Just say my name."
+        ]
+        return random.choice(farewells)
 
 # ─── COMMAND PROCESSOR ───
 class CommandProcessor:
@@ -351,7 +361,7 @@ class CommandProcessor:
         if any(w in cmd_lower for w in ['status', 'health', 'running', 'alive']):
             return "I'm good. Server's up. Listening. What do you need?"
         
-        if any(w in cmd_lower for w in ['quiet', 'shut up', 'go away', 'sleep', 'later']):
+        if any(w in cmd_lower for w in ['quiet', 'shut up', 'go away', 'sleep', 'later', 'bye', 'stop', "that's enough", 'enough', 'done', 'later jr', 'sleep jr', 'quiet jr', "that's enough jr", 'done jr', 'enough jr']):
             return "Aight. Going quiet. Say my name when you need me."
         
         # ─── FALLBACK ───
@@ -414,7 +424,7 @@ def main():
                     soul.log_conversation(heard, response)
                     
                     # Check if user wants to sleep
-                    if any(w in heard.lower() for w in ['quiet', 'shut up', 'go away', 'sleep', 'later', 'bye']):
+                    if any(w in heard.lower() for w in ['quiet', 'shut up', 'go away', 'sleep', 'later', 'bye', 'stop', "that's enough", 'enough', 'done', 'later jr', 'sleep jr', 'quiet jr', "that's enough jr", 'done jr', 'enough jr']):
                         farewell = voice.farewell()
                         voice.speak(farewell)
                         print(f"[JR] {farewell}")
