@@ -415,6 +415,10 @@ class EmpireEngine:
         self._backup_thread = threading.Thread(target=self._auto_backup, daemon=True)
         self._backup_thread.start()
         
+        # Terminal auto-deploy watcher
+        self._watcher_thread = threading.Thread(target=self._watcher_loop, daemon=True)
+        self._watcher_thread.start()
+        
         # Autonomous modules — independent loading
         self.coder = AutoCoder('~/liljr-autonomous') if AUTONOMOUS_CODER else None
         self.marketing = MarketingEngine() if AUTONOMOUS_MARKETING else None
@@ -463,6 +467,45 @@ class EmpireEngine:
             except:
                 pass
     
+    # ─── TERMINAL AUTO-DEPLOY WATCHER ───
+    def _watcher_loop(self):
+        """Watch project directory for changes and auto-deploy."""
+        watch_dir = os.path.join(HOME, 'liljr_projects')
+        deploy_dir = os.path.join(HOME, 'liljr-autonomous', 'web')
+        last_mtime = {}
+        
+        while True:
+            time.sleep(5)  # Check every 5 seconds
+            try:
+                if not os.path.exists(watch_dir):
+                    continue
+                    
+                changed = False
+                for fname in os.listdir(watch_dir):
+                    fpath = os.path.join(watch_dir, fname)
+                    if os.path.isfile(fpath):
+                        mtime = os.path.getmtime(fpath)
+                        if fname not in last_mtime or last_mtime[fname] != mtime:
+                            last_mtime[fname] = mtime
+                            changed = True
+                
+                if changed:
+                    # Auto-deploy changed files
+                    os.makedirs(deploy_dir, exist_ok=True)
+                    for fname in os.listdir(watch_dir):
+                        src = os.path.join(watch_dir, fname)
+                        dst = os.path.join(deploy_dir, fname)
+                        if os.path.isfile(src):
+                            with open(src, 'r') as f:
+                                content = f.read()
+                            with open(dst, 'w') as f:
+                                f.write(content)
+                    
+                    self.db.log('INFO', f'Auto-deployed project files to web/', 'terminal')
+                    
+            except Exception as e:
+                pass
+
     # ─── TRADING ───
     def buy(self, symbol, qty=1):
         symbol = symbol.upper()
@@ -957,6 +1000,19 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/health':
             self._json_response(engine.health())
         
+        elif path == '/terminal' or path == '/terminal/':
+            # Serve the web terminal IDE
+            terminal_path = os.path.join(HOME, 'liljr-autonomous', 'terminal.html')
+            if os.path.exists(terminal_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(terminal_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self._json_response({"error": "terminal.html not found"}, 404)
+        
         elif path == '/api/empire':
             self._json_response(engine.empire_status())
         
@@ -1128,27 +1184,73 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/flush-logs':
             self._json_response(engine.flush_logs())
         
-        # ═══ STEALTH ═══
-        elif path == '/api/stealth/enable':
-            if engine.stealth:
-                engine.stealth.enable()
-                self._json_response({"status": "stealth_enabled"})
-            else:
-                self._json_response({"error": "Stealth module not loaded"}, 500)
+        # ═══ TERMINAL / WEB IDE ═══
+        elif path == '/api/terminal/save':
+            files = data.get('files', {})
+            main_file = data.get('main', 'app.py')
+            save_dir = os.path.join(HOME, 'liljr_projects')
+            os.makedirs(save_dir, exist_ok=True)
+            for fname, content in files.items():
+                with open(os.path.join(save_dir, fname), 'w') as f:
+                    f.write(content)
+            self._json_response({"status": "saved", "dir": save_dir, "files": list(files.keys()), "main": main_file})
         
-        elif path == '/api/stealth/status':
-            if engine.stealth:
-                status = engine.stealth.status()
-                self._json_response({"status": status})
-            else:
-                self._json_response({"status": "Stealth: OFF (module missing)"})
+        elif path == '/api/terminal/deploy':
+            files = data.get('files', {})
+            main_file = data.get('main', 'app.py')
+            deploy_dir = os.path.join(HOME, 'liljr-autonomous', 'web')
+            os.makedirs(deploy_dir, exist_ok=True)
+            
+            # Save all files to web dir
+            for fname, content in files.items():
+                with open(os.path.join(deploy_dir, fname), 'w') as f:
+                    f.write(content)
+            
+            # Git commit & push auto-deploy
+            try:
+                subprocess.run(
+                    ['bash', '-c', f'cd {os.path.join(HOME, "liljr-autonomous")} && git add -A && git commit -m "auto-deploy: {main_file}" && git push origin main'],
+                    capture_output=True, text=True, timeout=30
+                )
+                git_status = "pushed"
+            except Exception as e:
+                git_status = f"local_only: {str(e)[:80]}"
+            
+            self._json_response({
+                "status": "deployed",
+                "url": f"http://localhost:8000/web/{main_file}",
+                "dir": deploy_dir,
+                "files": list(files.keys()),
+                "git": git_status
+            })
         
-        elif path == '/api/stealth/panic':
-            if engine.stealth:
-                threading.Thread(target=engine.stealth.panic, args=("API panic triggered",)).start()
-                self._json_response({"status": "panic_initiated"})
-            else:
-                self._json_response({"error": "Stealth module not loaded"}, 500)
+        elif path == '/api/terminal/run':
+            code = data.get('code', '')
+            filename = data.get('filename', 'temp.py')
+            
+            # Write to temp
+            tmp_path = os.path.join(HOME, 'liljr_executions', f"run_{int(time.time())}_{filename}")
+            os.makedirs(os.path.dirname(tmp_path), exist_ok=True)
+            with open(tmp_path, 'w') as f:
+                f.write(code)
+            
+            # Execute
+            try:
+                result = subprocess.run(
+                    ['python3', tmp_path],
+                    capture_output=True, text=True, timeout=15
+                )
+                self._json_response({
+                    "status": "executed",
+                    "output": result.stdout[:2000],
+                    "error": result.stderr[:1000] if result.returncode != 0 else None,
+                    "file": tmp_path,
+                    "exit_code": result.returncode
+                })
+            except subprocess.TimeoutExpired:
+                self._json_response({"status": "timeout", "error": "Code took too long", "file": tmp_path})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200], "file": tmp_path})
         
         # ═══ AUTONOMOUS MODULES ═══
         elif path == '/api/self/scan':

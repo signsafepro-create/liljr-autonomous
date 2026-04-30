@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚡ LilJR Terminal</title>
+<style>
+  :root { --bg:#0a0a0a; --panel:#111; --border:#222; --text:#0f0; --accent:#0ff; --warn:#ff0; --err:#f00; }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'SF Mono',monospace; }
+  body { background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  #header { padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; font-size:12px; }
+  #header h1 { font-size:14px; color:var(--accent); flex:1; }
+  .btn { background:var(--border); color:var(--text); border:none; padding:6px 12px; font-size:11px; cursor:pointer; border-radius:4px; }
+  .btn:hover { background:var(--accent); color:#000; }
+  .btn.deploy { background:#0a0; color:#0f0; }
+  .btn.deploy:hover { background:#0f0; color:#000; }
+  .btn.danger { background:#300; color:#f00; }
+  #main { flex:1; display:flex; overflow:hidden; }
+  #sidebar { width:140px; background:var(--panel); border-right:1px solid var(--border); overflow-y:auto; font-size:11px; }
+  #sidebar .file { padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--border); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #sidebar .file:hover { background:var(--border); }
+  #sidebar .file.active { background:var(--accent); color:#000; }
+  #sidebar .section { padding:4px 10px; font-size:9px; color:#888; text-transform:uppercase; margin-top:4px; }
+  #editor-area { flex:1; display:flex; flex-direction:column; }
+  #tabs { display:flex; background:var(--panel); border-bottom:1px solid var(--border); font-size:11px; }
+  .tab { padding:6px 12px; cursor:pointer; border-right:1px solid var(--border); }
+  .tab.active { background:var(--bg); border-bottom:2px solid var(--accent); }
+  .tab .close { margin-left:6px; color:#888; }
+  .tab .close:hover { color:var(--err); }
+  #editor-wrap { flex:1; position:relative; }
+  #editor { width:100%; height:100%; background:var(--bg); color:var(--text); border:none; padding:12px; font-size:13px; line-height:1.5; resize:none; outline:none; tab-size:2; }
+  #terminal { height:160px; background:var(--panel); border-top:1px solid var(--border); padding:8px; overflow-y:auto; font-size:11px; }
+  #terminal .out { color:#aaa; }
+  #terminal .err { color:var(--err); }
+  #terminal .ok { color:var(--accent); }
+  #terminal .cmd { color:var(--warn); }
+  #status-bar { padding:4px 12px; background:var(--panel); border-top:1px solid var(--border); font-size:10px; color:#888; display:flex; gap:12px; }
+  #status-bar span { display:flex; align-items:center; gap:4px; }
+  .dot { width:6px; height:6px; border-radius:50%; background:#333; }
+  .dot.on { background:#0f0; box-shadow:0 0 4px #0f0; }
+  .dot.off { background:#f00; }
+  #resize-handle { height:4px; background:var(--border); cursor:row-resize; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>⚡ LILJR TERMINAL</h1>
+  <button class="btn" onclick="newFile()">+ New</button>
+  <button class="btn deploy" onclick="saveAndDeploy()">🚀 Deploy</button>
+  <button class="btn" onclick="runCode()">▶ Run</button>
+  <button class="btn danger" onclick="resetAll()">↺ Reset</button>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div class="section">Project</div>
+    <div class="file active" onclick="openFile('app.py')">app.py</div>
+    <div class="file" onclick="openFile('index.html')">index.html</div>
+    <div class="file" onclick="openFile('style.css')">style.css</div>
+    <div class="section">API</div>
+    <div class="file" onclick="openFile('routes.py')">routes.py</div>
+    <div class="file" onclick="openFile('models.py')">models.py</div>
+    <div class="section">Config</div>
+    <div class="file" onclick="openFile('deploy.json')">deploy.json</div>
+  </div>
+  
+  <div id="editor-area">
+    <div id="tabs">
+      <div class="tab active" data-file="app.py">app.py <span class="close" onclick="closeTab('app.py')">×</span></div>
+    </div>
+    <div id="editor-wrap">
+      <textarea id="editor" spellcheck="false" placeholder="# LilJR Terminal
+# Type code here. Hit 🚀 Deploy to push to your app.
+# Hit ▶ Run to execute on the server.
+
+print('Hello from LilJR!')
+"></textarea>
+    </div>
+    <div id="resize-handle"></div>
+    <div id="terminal"></div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <span><div class="dot on" id="server-dot"></div> Server</span>
+  <span><div class="dot" id="deploy-dot"></div> Deploy</span>
+  <span><div class="dot" id="git-dot"></div> Git</span>
+  <span id="cursor-pos">Ln 1, Col 1</span>
+  <span id="autosave-status" style="margin-left:auto;">Auto-save: ON</span>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let files = {'app.py': `# LilJR Terminal\n# Your code here\n\nprint('Hello LilJR!')\n`};
+let currentFile = 'app.py';
+let autoSaveTimer = null;
+let autoDeploy = true;
+
+const editor = document.getElementById('editor');
+const terminal = document.getElementById('terminal');
+const serverDot = document.getElementById('server-dot');
+const deployDot = document.getElementById('deploy-dot');
+
+function log(msg, type='out') {
+  const div = document.createElement('div');
+  div.className = type;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+async function apiPost(path, data) {
+  try {
+    const r = await fetch(`${API}${path}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    return await r.json();
+  } catch(e) { return {error: e.message}; }
+}
+
+async function apiGet(path) {
+  try {
+    const r = await fetch(`${API}${path}`);
+    return await r.json();
+  } catch(e) { return {error: e.message}; }
+}
+
+// ─── HEALTH CHECK ───
+async function checkHealth() {
+  const h = await apiGet('/api/health');
+  if (h.version) {
+    serverDot.className = 'dot on';
+    log(`Server alive: ${h.version}`, 'ok');
+  } else {
+    serverDot.className = 'dot off';
+    log('Server DOWN', 'err');
+  }
+}
+
+// ─── FILE OPERATIONS ───
+function openFile(name) {
+  if (!files[name]) files[name] = '';
+  // Save current
+  files[currentFile] = editor.value;
+  // Switch
+  currentFile = name;
+  editor.value = files[name];
+  // Update UI
+  document.querySelectorAll('#sidebar .file').forEach(f => f.classList.remove('active'));
+  event.target.classList.add('active');
+  updateTabs();
+  log(`Opened: ${name}`);
+}
+
+function updateTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = Object.keys(files).map(f => 
+    `<div class="tab ${f===currentFile?'active':''}" data-file="${f}" onclick="switchTab('${f}')">${f} <span class="close" onclick="closeTab('${f}')">×</span></div>`
+  ).join('');
+}
+
+function switchTab(name) {
+  files[currentFile] = editor.value;
+  currentFile = name;
+  editor.value = files[name] || '';
+  updateTabs();
+}
+
+function closeTab(name) {
+  if (Object.keys(files).length <= 1) return;
+  delete files[name];
+  if (currentFile === name) {
+    currentFile = Object.keys(files)[0];
+    editor.value = files[currentFile] || '';
+  }
+  updateTabs();
+}
+
+function newFile() {
+  const name = prompt('Filename:');
+  if (!name) return;
+  files[name] = '';
+  switchTab(name);
+  // Add to sidebar
+  const div = document.createElement('div');
+  div.className = 'file';
+  div.textContent = name;
+  div.onclick = () => openFile(name);
+  document.getElementById('sidebar').appendChild(div);
+  log(`Created: ${name}`);
+}
+
+// ─── AUTO-SAVE ───
+editor.addEventListener('input', () => {
+  files[currentFile] = editor.value;
+  document.getElementById('autosave-status').textContent = 'Auto-save: SAVING...';
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    document.getElementById('autosave-status').textContent = 'Auto-save: SAVED';
+    if (autoDeploy) saveAndDeploy();
+  }, 2000);
+});
+
+// ─── DEPLOY ───
+async function saveAndDeploy() {
+  files[currentFile] = editor.value;
+  deployDot.className = 'dot on';
+  log('🚀 Deploying...', 'cmd');
+  
+  // Save to server
+  const res = await apiPost('/api/terminal/save', {
+    files: files,
+    main: currentFile
+  });
+  
+  if (res.status === 'saved') {
+    log('✅ Saved to server', 'ok');
+    
+    // Auto-deploy to liljr
+    const deploy = await apiPost('/api/terminal/deploy', {
+      files: files,
+      main: currentFile
+    });
+    
+    if (deploy.status === 'deployed') {
+      log(`🚀 DEPLOYED: ${deploy.url || 'liljr-app'}`, 'ok');
+      deployDot.className = 'dot on';
+    } else {
+      log(`Deploy: ${JSON.stringify(deploy)}`, 'err');
+      deployDot.className = 'dot off';
+    }
+  } else {
+    log(`Save failed: ${JSON.stringify(res)}`, 'err');
+    deployDot.className = 'dot off';
+  }
+}
+
+// ─── RUN CODE ───
+async function runCode() {
+  files[currentFile] = editor.value;
+  log('▶ Running...', 'cmd');
+  const res = await apiPost('/api/terminal/run', {
+    code: editor.value,
+    filename: currentFile
+  });
+  if (res.output) log(res.output, 'ok');
+  if (res.error) log(res.error, 'err');
+  if (res.status) log(`Status: ${res.status}`, 'ok');
+}
+
+// ─── RESET ───
+function resetAll() {
+  if (!confirm('Reset all files?')) return;
+  files = {'app.py': '# Fresh start\nprint("Hello LilJR!")\n'};
+  currentFile = 'app.py';
+  editor.value = files['app.py'];
+  updateTabs();
+  log('↺ Reset complete');
+}
+
+// ─── KEYBOARD SHORTCUTS ───
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+  }
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    saveAndDeploy();
+  }
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    runCode();
+  }
+});
+
+// ─── CURSOR POSITION ───
+editor.addEventListener('keyup', () => {
+  const val = editor.value.substring(0, editor.selectionStart);
+  const lines = val.split('\n');
+  document.getElementById('cursor-pos').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length + 1}`;
+});
+
+// ─── TERMINAL RESIZE ───
+let resizing = false;
+document.getElementById('resize-handle').addEventListener('mousedown', () => resizing = true);
+document.addEventListener('mousemove', (e) => {
+  if (!resizing) return;
+  const h = window.innerHeight - e.clientY - 40;
+  if (h > 60 && h < 400) document.getElementById('terminal').style.height = h + 'px';
+});
+document.addEventListener('mouseup', () => resizing = false);
+
+// ─── INIT ───
+checkHealth();
+setInterval(checkHealth, 10000);
+log('⚡ LilJR Terminal loaded. Ctrl+S = Deploy, Ctrl+Enter = Run');
+</script>
+
+</body>
+</html>
