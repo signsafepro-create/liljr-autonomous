@@ -27,6 +27,7 @@ echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
+cp liljr_server_manager.py ~/liljr_server_manager.py
 cp liljr_immortal_mind.py ~/liljr_immortal_mind.py
 cp liljr_mobile_brain.py ~/liljr_mobile_brain.py
 cp liljr_silent.py ~/liljr_silent.py
@@ -51,19 +52,16 @@ mkdir -p ~/liljr-autonomous/web/phone/phone
 cp phone/icon.svg ~/liljr-autonomous/web/phone/phone/icon.png 2>/dev/null || touch ~/liljr-autonomous/web/phone/phone/icon.png
 echo "✅ Files copied"
 
-# ─── 4. START SERVER ───
-echo "[4/10] Starting LilJR server..."
-python3 ~/server_v8.py > ~/server.log 2>&1 &
-sleep 6
+# ─── 4. START BUILT-IN SERVER ───
+echo "[4/10] Starting built-in server..."
+python3 ~/liljr_server_manager.py start
+sleep 4
+python3 ~/liljr_server_manager.py status
+echo "✅ Server running on port 8000"
 
-# Check if server is up
-for i in 1 2 3; do
-    if curl -s http://localhost:8000/api/health >/dev/null 2>&1; then
-        echo "✅ Server running on port 8000"
-        break
-    fi
-    sleep 2
-done
+# Start server watchdog in background
+nohup python3 ~/liljr_server_manager.py watchdog > ~/liljr_watchdog.log 2>&1 &
+echo "✅ Server watchdog running"
 
 # ─── 5. START SECURITY FORTRESS ───
 echo "[5/10] Activating security fortress..."
