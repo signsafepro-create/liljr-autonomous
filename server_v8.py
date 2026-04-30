@@ -227,7 +227,7 @@ class EmpireDB:
         c.execute("SELECT value FROM state WHERE key='cash'")
         if not c.fetchone():
             defaults = {
-                'cash': '10000.0',
+                'cash': '1000000.0',
                 'mode': 'empire',
                 'version': VERSION,
                 'created': str(time.time()),
@@ -458,11 +458,9 @@ class EmpireEngine:
         symbol = symbol.upper()
         price = PRICES.get(symbol, random.randint(50, 500))
         total = price * qty
-        cash = float(self.db.get('cash', 10000))
+        cash = float(self.db.get('cash', 1000000))
         
-        if cash < total:
-            return {"status": "ERROR", "reason": "Insufficient cash"}
-        
+        # NO RESTRICTIONS: User wants unlimited trading
         cash -= total
         self.db.set('cash', cash)
         
@@ -496,7 +494,7 @@ class EmpireEngine:
         
         price = PRICES.get(symbol, random.randint(50, 500))
         total = price * qty
-        cash = float(self.db.get('cash', 10000))
+        cash = float(self.db.get('cash', 1000000))
         cash += total
         self.db.set('cash', cash)
         
@@ -520,7 +518,7 @@ class EmpireEngine:
     
     def portfolio(self):
         positions = self.db.query("SELECT * FROM positions")
-        cash = float(self.db.get('cash', 10000))
+        cash = float(self.db.get('cash', 1000000))
         total = cash
         for p in positions:
             current = PRICES.get(p['symbol'], p['avg_price'])
@@ -810,7 +808,7 @@ class EmpireEngine:
             "version": VERSION,
             "uptime": time.time() - START_TIME,
             "health_score": self.db.get('health_score', 100),
-            "cash": float(self.db.get('cash', 10000)),
+            "cash": float(self.db.get('cash', 1000000)),
             "positions": len(self.db.query("SELECT * FROM positions")),
             "trades": self.db.query("SELECT COUNT(*) as c FROM trades")[0]['c'],
             "watchlist": len(self.db.query("SELECT * FROM watchlist")),

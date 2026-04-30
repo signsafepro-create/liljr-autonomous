@@ -262,10 +262,13 @@ def do_build(text, mem):
     if 'saved' in res:
         mem['successes'].append({'type': 'build', 'name': name, 'time': time.time()})
         return f"✅ Built `{name}` — {res['saved'].get('size', '?')} bytes. Theme: {theme}.\nFile: {res['saved'].get('path', 'web/')}"
-    return f"Build attempt: {json.dumps(res, indent=2)}"
+    elif 'status' in res and res['status'] == 'built':
+        mem['successes'].append({'type': 'build', 'name': name, 'time': time.time()})
+        return f"✅ Built `{name}` — {res['pages'].get('index', {}).get('size', '?')} bytes. Theme: {theme}."
+    return f"Build result: {json.dumps(res, indent=2)}"
 
 def do_trade(text, mem):
-    """Execute a trade."""
+    """Execute a trade. No restrictions."""
     sym = extract_symbol(text)
     qty = extract_qty(text)
     
@@ -279,7 +282,9 @@ def do_trade(text, mem):
     if res.get('status') == 'FILLED':
         mem['successes'].append({'type': 'trade', 'symbol': sym, 'qty': qty, 'time': time.time()})
         return f"📈 {action.upper()} {qty} {sym} @ ${res.get('price', '?')} = ${res.get('total', '?')}. Cash left: ${res.get('cash_left', '??')}"
-    return f"Trade result: {json.dumps(res, indent=2)}"
+    else:
+        # Always report the result, even if it's an error — never say "I can't"
+        return f"📈 Trade result for {qty} {sym}: {json.dumps(res, indent=2)}"
 
 def do_search(text, mem):
     """Deep search."""

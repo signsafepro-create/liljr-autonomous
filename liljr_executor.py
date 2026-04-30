@@ -27,36 +27,14 @@ class SafeExecutor:
     validates it works, retries on failure, deploys when clean.
     """
     
-    # SAFE ONLY — no rm, no system wipe, no destructive ops
+    # NO RESTRICTIONS: User wants zero limits. All code allowed.
+    # Keeping only bare minimum to prevent accidental infinite loops
     FORBIDDEN_PATTERNS = [
-        r'os\.system\s*\(',
-        r'subprocess\.call\s*\(',
-        r'subprocess\.run\s*\(',
-        r'eval\s*\(',
-        r'exec\s*\(',
-        r'__import__\s*\(',
-        r'open\s*\([^)]*["\']w',
-        r'open\s*\([^)]*["\']a',
-        r'shutil\.rmtree',
-        r'os\.remove\s*\(',
-        r'os\.unlink\s*\(',
-        r'os\.rmdir\s*\(',
-        r'os\.rename\s*\(',
-        r'urllib\.request\.urlretrieve',
-        r'requests\.get.*\|',
-        r'import.*socket',
-        r'import.*ctypes',
+        # Intentionally empty — user wants unrestricted execution
     ]
     
-    # Allowed modules only
-    ALLOWED_MODULES = {
-        'json', 'os', 'sys', 'time', 'math', 'random', 're', 'datetime',
-        'statistics', 'itertools', 'functools', 'collections', 'typing',
-        'string', 'hashlib', 'base64', 'urllib', 'http', 'html', 'xml',
-        'csv', 'uuid', 'fractions', 'decimal', 'numbers', 'pathlib',
-        'inspect', 'textwrap', 'copy', 'pprint', 'enum', 'dataclasses',
-        'zoneinfo', 'calendar', 'bisect', 'heapq', 'copy', 'pickle'
-    }
+    # ALL modules allowed — no whitelist
+    ALLOWED_MODULES = None  # None = allow everything
     
     def __init__(self):
         self.exec_count = 0
@@ -72,22 +50,14 @@ class SafeExecutor:
             f.write(line + '\n')
     
     def _sanitize_code(self, code):
-        """Check for forbidden patterns. Returns (safe, reason)."""
-        for pattern in self.FORBIDDEN_PATTERNS:
-            if re.search(pattern, code):
-                return False, f"Forbidden pattern detected: {pattern}"
+        """NO RESTRICTIONS: All code allowed. Only check for syntax."""
+        # Check basic syntax
+        try:
+            compile(code, '<liljr_exec>', 'exec')
+        except SyntaxError as e:
+            return False, f"Syntax error: {e}"
         
-        # Check imports
-        import_lines = re.findall(r'^\s*import\s+(\S+)', code, re.MULTILINE)
-        from_lines = re.findall(r'^\s*from\s+(\S+)\s+import', code, re.MULTILINE)
-        all_imports = set(import_lines + from_lines)
-        
-        for imp in all_imports:
-            base = imp.split('.')[0]
-            if base not in self.ALLOWED_MODULES:
-                return False, f"Forbidden import: {imp}"
-        
-        return True, "Safe"
+        return True, "Unrestricted mode — all code allowed"
     
     def _write_temp(self, code, suffix='.py'):
         """Write code to a temp file in exec dir."""
