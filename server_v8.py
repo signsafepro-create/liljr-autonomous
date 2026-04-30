@@ -1013,6 +1013,19 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json_response({"error": "terminal.html not found"}, 404)
         
+        elif path == '/phone' or path == '/phone/':
+            # Serve LilJR Phone OS
+            phone_path = os.path.join(HOME, 'liljr-autonomous', 'liljr_phone_os.html')
+            if os.path.exists(phone_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(phone_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self._json_response({"error": "liljr_phone_os.html not found"}, 404)
+        
         elif path == '/api/empire':
             self._json_response(engine.empire_status())
         
@@ -1251,6 +1264,98 @@ class Handler(BaseHTTPRequestHandler):
                 self._json_response({"status": "timeout", "error": "Code took too long", "file": tmp_path})
             except Exception as e:
                 self._json_response({"status": "error", "error": str(e)[:200], "file": tmp_path})
+        
+        # ═══ PHONE / NATIVE BODY ═══
+        elif path == '/api/phone/hotspot/on':
+            try:
+                # Enable WiFi hotspot via termux
+                subprocess.run(['termux-wifi-enable', 'true'], capture_output=True, timeout=5)
+                # Alternative: if rooted, use su
+                # subprocess.run(['su', '-c', 'svc wifi sethotspot true'], capture_output=True, timeout=5)
+                engine.db.log('INFO', 'Hotspot enabled', 'phone')
+                self._json_response({"status": "hotspot_on", "ssid": "LilJR-Network", "password": "liljr2026"})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/hotspot/off':
+            try:
+                subprocess.run(['termux-wifi-enable', 'false'], capture_output=True, timeout=5)
+                engine.db.log('INFO', 'Hotspot disabled', 'phone')
+                self._json_response({"status": "hotspot_off"})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/battery':
+            try:
+                result = subprocess.run(['termux-battery-status'], capture_output=True, text=True, timeout=5)
+                # Parse termux battery output (JSON)
+                import json as _json
+                batt = _json.loads(result.stdout)
+                self._json_response({
+                    "percentage": batt.get('percentage', 'unknown'),
+                    "status": batt.get('status', 'unknown'),
+                    "plugged": batt.get('plugged', 'unknown'),
+                    "temperature": batt.get('temperature', 'unknown')
+                })
+            except Exception as e:
+                self._json_response({"percentage": "unknown", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/photo':
+            try:
+                photo_path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
+                result = subprocess.run(['termux-camera-photo', '-c', '0', photo_path], capture_output=True, text=True, timeout=10)
+                if os.path.exists(photo_path):
+                    self._json_response({"status": "photo_taken", "path": photo_path})
+                else:
+                    self._json_response({"status": "error", "error": "Photo file not created"})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/call':
+            try:
+                number = data.get('number', '')
+                if not number:
+                    self._json_response({"status": "error", "error": "No number provided"})
+                    return
+                subprocess.run(['termux-telephony-call', number], capture_output=True, timeout=5)
+                self._json_response({"status": "calling", "number": number})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/sms':
+            try:
+                to = data.get('to', '')
+                body = data.get('body', '')
+                if not to or not body:
+                    self._json_response({"status": "error", "error": "Need to and body"})
+                    return
+                subprocess.run(['termux-sms-send', '-n', to, body], capture_output=True, timeout=5)
+                self._json_response({"status": "sent", "to": to})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/sms/read':
+            try:
+                result = subprocess.run(['termux-sms-list', '-l', '10', '-t', 'inbox'], capture_output=True, text=True, timeout=10)
+                import json as _json
+                msgs = _json.loads(result.stdout)
+                self._json_response({"messages": msgs[:10]})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
+        
+        elif path == '/api/phone/notify':
+            try:
+                title = data.get('title', 'LilJR')
+                content = data.get('content', 'Notification')
+                subprocess.run([
+                    'termux-notification',
+                    '--title', title,
+                    '--content', content,
+                    '--priority', 'high'
+                ], capture_output=True, timeout=3)
+                self._json_response({"status": "notified", "title": title})
+            except Exception as e:
+                self._json_response({"status": "error", "error": str(e)[:200]})
         
         # ═══ AUTONOMOUS MODULES ═══
         elif path == '/api/self/scan':

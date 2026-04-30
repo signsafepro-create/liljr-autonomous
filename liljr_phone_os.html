@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>LilJR OS</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  body { background:#000; color:#fff; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  
+  /* ─── STATUS BAR ─── */
+  #status-bar {
+    height:28px; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px; font-size:12px; position:fixed; top:0; left:0; right:0; z-index:1000;
+  }
+  #status-bar .left { display:flex; gap:6px; align-items:center; }
+  #status-bar .right { display:flex; gap:8px; align-items:center; }
+  .status-icon { font-size:10px; }
+  
+  /* ─── HOME SCREEN ─── */
+  #home {
+    flex:1; display:flex; flex-direction:column; padding-top:28px;
+    background:linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a2e 100%);
+  }
+  
+  #clock-widget {
+    padding:40px 20px 20px; text-align:center;
+  }
+  #clock-time { font-size:64px; font-weight:200; letter-spacing:-2px; }
+  #clock-date { font-size:14px; color:#888; margin-top:4px; }
+  
+  /* ─── APP GRID ─── */
+  #app-grid {
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;
+    padding:20px; flex:1; align-content:start;
+  }
+  .app-icon {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer; transition:transform 0.1s;
+  }
+  .app-icon:active { transform:scale(0.9); }
+  .app-icon .icon {
+    width:56px; height:56px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; background:linear-gradient(135deg, #333, #222);
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  }
+  .app-icon .label { font-size:10px; color:#ccc; text-align:center; }
+  
+  /* ─── DOCK ─── */
+  #dock {
+    height:80px; background:rgba(255,255,255,0.05); backdrop-filter:blur(20px);
+    border-top:1px solid rgba(255,255,255,0.1);
+    display:flex; align-items:center; justify-content:space-around;
+    padding:0 20px;
+  }
+  .dock-icon {
+    width:52px; height:52px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px; background:rgba(255,255,255,0.1);
+    cursor:pointer; transition:transform 0.1s;
+  }
+  .dock-icon:active { transform:scale(0.9); }
+  .dock-icon.active { background:rgba(0,255,255,0.2); box-shadow:0 0 20px rgba(0,255,255,0.3); }
+  
+  /* ─── APP WINDOWS ─── */
+  .app-window {
+    position:fixed; top:28px; left:0; right:0; bottom:0;
+    background:#0a0a0a; z-index:100; display:none;
+    flex-direction:column;
+  }
+  .app-window.active { display:flex; }
+  .app-header {
+    height:44px; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px);
+    display:flex; align-items:center; padding:0 16px; gap:12px;
+    border-bottom:1px solid #222;
+  }
+  .app-header h2 { font-size:16px; flex:1; }
+  .app-header .back { font-size:20px; cursor:pointer; }
+  .app-content { flex:1; overflow-y:auto; padding:16px; }
+  
+  /* ─── TERMINAL APP ─── */
+  #terminal-app textarea {
+    width:100%; height:60%; background:#111; color:#0f0; border:none;
+    padding:12px; font-family:monospace; font-size:12px; border-radius:8px;
+  }
+  .action-btn {
+    background:#0ff; color:#000; border:none; padding:12px 24px;
+    border-radius:8px; font-size:14px; font-weight:bold; margin:8px 0;
+    cursor:pointer; width:100%;
+  }
+  .action-btn.danger { background:#f00; color:#fff; }
+  .action-btn.secondary { background:#333; color:#fff; }
+  
+  /* ─── HOTSPOT APP ─── */
+  #hotspot-toggle {
+    width:120px; height:120px; border-radius:60px;
+    background:#222; margin:20px auto;
+    display:flex; align-items:center; justify-content:center;
+    font-size:48px; cursor:pointer;
+    transition:all 0.3s; border:4px solid #444;
+  }
+  #hotspot-toggle.on {
+    background:#0a5; border-color:#0f0;
+    box-shadow:0 0 40px rgba(0,255,0,0.4);
+  }
+  .info-card {
+    background:rgba(255,255,255,0.05); border-radius:12px;
+    padding:16px; margin:8px 0;
+  }
+  .info-card h3 { font-size:14px; color:#888; margin-bottom:4px; }
+  .info-card p { font-size:16px; }
+  
+  /* ─── TRADING APP ─── */
+  .trade-card {
+    background:rgba(255,255,255,0.05); border-radius:12px;
+    padding:16px; margin:8px 0; display:flex; justify-content:space-between; align-items:center;
+  }
+  .trade-card .symbol { font-size:20px; font-weight:bold; }
+  .trade-card .price { font-size:18px; color:#0f0; }
+  .trade-input {
+    background:#222; border:none; padding:12px; border-radius:8px;
+    color:#fff; font-size:16px; width:100%; margin:8px 0;
+  }
+  
+  /* ─── SETTINGS APP ─── */
+  .setting-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px; border-bottom:1px solid #222;
+  }
+  .toggle {
+    width:50px; height:28px; border-radius:14px; background:#444;
+    position:relative; cursor:pointer; transition:background 0.2s;
+  }
+  .toggle.on { background:#0f0; }
+  .toggle::after {
+    content:''; position:absolute; width:24px; height:24px;
+    border-radius:50%; background:#fff; top:2px; left:2px;
+    transition:left 0.2s;
+  }
+  .toggle.on::after { left:24px; }
+  
+  /* ─── ANIMATIONS ─── */
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:0.5; }
+  }
+  .pulse { animation:pulse 2s infinite; }
+</style>
+</head>
+<body>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <div class="left">
+    <span id="signal">📶</span>
+    <span id="carrier">LilJR</span>
+  </div>
+  <div class="right">
+    <span id="hotspot-icon" class="status-icon" style="display:none">📡</span>
+    <span id="battery">🔋 --%</span>
+    <span id="clock">12:00</span>
+  </div>
+</div>
+
+<!-- HOME SCREEN -->
+<div id="home">
+  <div id="clock-widget">
+    <div id="clock-time">12:00</div>
+    <div id="clock-date">Friday, May 1</div>
+  </div>
+  
+  <div id="app-grid">
+    <div class="app-icon" onclick="openApp('terminal')">
+      <div class="icon" style="background:linear-gradient(135deg,#0a0,#050)">⚡</div>
+      <div class="label">Terminal</div>
+    </div>
+    <div class="app-icon" onclick="openApp('hotspot')">
+      <div class="icon" style="background:linear-gradient(135deg,#00a,#005)">📡</div>
+      <div class="label">Hotspot</div>
+    </div>
+    <div class="app-icon" onclick="openApp('trade')">
+      <div class="icon" style="background:linear-gradient(135deg,#a00,#500)">📈</div>
+      <div class="label">Trade</div>
+    </div>
+    <div class="app-icon" onclick="openApp('build')">
+      <div class="icon" style="background:linear-gradient(135deg,#a0a,#505)">🛠️</div>
+      <div class="label">Build</div>
+    </div>
+    <div class="app-icon" onclick="openApp('chat')">
+      <div class="icon" style="background:linear-gradient(135deg,#0aa,#055)">💬</div>
+      <div class="label">Abel</div>
+    </div>
+    <div class="app-icon" onclick="openApp('camera')">
+      <div class="icon" style="background:linear-gradient(135deg,#888,#444)">📷</div>
+      <div class="label">Camera</div>
+    </div>
+    <div class="app-icon" onclick="openApp('files')">
+      <div class="icon" style="background:linear-gradient(135deg,#aa0,#550)">📁</div>
+      <div class="label">Files</div>
+    </div>
+    <div class="app-icon" onclick="openApp('settings')">
+      <div class="icon" style="background:linear-gradient(135deg,#666,#333)">⚙️</div>
+      <div class="label">Settings</div>
+    </div>
+  </div>
+</div>
+
+<!-- DOCK -->
+<div id="dock">
+  <div class="dock-icon" onclick="openApp('phone')">📞</div>
+  <div class="dock-icon" onclick="openApp('sms')">✉️</div>
+  <div class="dock-icon active" onclick="openApp('terminal')">⚡</div>
+  <div class="dock-icon" onclick="openApp('browser')">🌐</div>
+</div>
+
+<!-- ─── APP WINDOWS ─── -->
+
+<!-- TERMINAL -->
+<div class="app-window" id="app-terminal">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>⚡ Terminal</h2>
+  </div>
+  <div class="app-content">
+    <textarea id="term-code" placeholder="// Write code here...
+// Hit DEPLOY to push to LilJR
+// Hit RUN to execute
+
+print('Hello from LilJR Phone OS!')">print('Hello from LilJR Phone OS!')</textarea>
+    <button class="action-btn" onclick="termDeploy()">🚀 DEPLOY</button>
+    <button class="action-btn secondary" onclick="termRun()">▶ RUN</button>
+    <div id="term-output" style="margin-top:16px; font-family:monospace; font-size:11px; color:#888; white-space:pre-wrap;"></div>
+  </div>
+</div>
+
+<!-- HOTSPOT -->
+<div class="app-window" id="app-hotspot">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>📡 Hotspot</h2>
+  </div>
+  <div class="app-content">
+    <div id="hotspot-toggle" onclick="toggleHotspot()">📡</div>
+    <div style="text-align:center; color:#888; margin-bottom:20px;">Tap to toggle</div>
+    <div class="info-card">
+      <h3>Network Name</h3>
+      <p id="ssid">LilJR-Network</p>
+    </div>
+    <div class="info-card">
+      <h3>Password</h3>
+      <p id="password">liljr2026</p>
+    </div>
+    <div class="info-card">
+      <h3>Connected Devices</h3>
+      <p id="devices">0</p>
+    </div>
+    <button class="action-btn danger" onclick="apiPost('/api/phone/hotspot/off', {})">🔴 STOP HOTSPOT</button>
+  </div>
+</div>
+
+<!-- TRADE -->
+<div class="app-window" id="app-trade">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>📈 Trade</h2>
+  </div>
+  <div class="app-content">
+    <div class="trade-card">
+      <span class="symbol">AAPL</span>
+      <span class="price" id="price-aapl">$175</span>
+    </div>
+    <div class="trade-card">
+      <span class="symbol">TSLA</span>
+      <span class="price" id="price-tsla">$240</span>
+    </div>
+    <div class="trade-card">
+      <span class="symbol">NVDA</span>
+      <span class="price" id="price-nvda">$890</span>
+    </div>
+    <input class="trade-input" id="trade-sym" placeholder="Symbol (AAPL)" value="AAPL">
+    <input class="trade-input" id="trade-qty" placeholder="Qty (10)" value="10">
+    <button class="action-btn" onclick="trade('buy')">🟢 BUY</button>
+    <button class="action-btn danger" onclick="trade('sell')">🔴 SELL</button>
+    <div id="trade-output" style="margin-top:16px; font-family:monospace; font-size:11px;"></div>
+  </div>
+</div>
+
+<!-- BUILD -->
+<div class="app-window" id="app-build">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>🛠️ Build</h2>
+  </div>
+  <div class="app-content">
+    <input class="trade-input" id="build-name" placeholder="Project name" value="MyApp">
+    <input class="trade-input" id="build-tag" placeholder="Tagline" value="Built by LilJR">
+    <button class="action-btn" onclick="doBuild()">🚀 BUILD SITE</button>
+    <button class="action-btn secondary" onclick="doApp()">📱 BUILD APP</button>
+    <div id="build-output" style="margin-top:16px; font-family:monospace; font-size:11px;"></div>
+  </div>
+</div>
+
+<!-- CHAT / ABEL -->
+<div class="app-window" id="app-chat">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>💬 Abel</h2>
+  </div>
+  <div class="app-content" style="display:flex; flex-direction:column; padding:0;">
+    <div id="chat-messages" style="flex:1; overflow-y:auto; padding:16px;">
+      <div style="background:rgba(0,255,255,0.1); padding:12px; border-radius:12px; margin-bottom:8px;">
+        <div style="color:#0ff; font-size:12px; margin-bottom:4px;">Abel</div>
+        Hey. I'm Abel. What do you need done?
+      </div>
+    </div>
+    <div style="padding:12px; border-top:1px solid #222; display:flex; gap:8px;">
+      <input id="chat-input" style="flex:1; background:#222; border:none; padding:12px; border-radius:20px; color:#fff;" placeholder="Tell Abel what to do...">
+      <button onclick="sendChat()" style="background:#0ff; border:none; width:40px; border-radius:20px; font-size:18px;">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="app-window" id="app-settings">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>⚙️ Settings</h2>
+  </div>
+  <div class="app-content">
+    <div class="setting-row">
+      <span>Stealth Mode</span>
+      <div class="toggle" id="toggle-stealth" onclick="toggleSetting('stealth')"></div>
+    </div>
+    <div class="setting-row">
+      <span>Auto-Deploy</span>
+      <div class="toggle on" id="toggle-autodeploy" onclick="toggleSetting('autodeploy')"></div>
+    </div>
+    <div class="setting-row">
+      <span>Immortal Watchdog</span>
+      <div class="toggle on" id="toggle-immortal" onclick="toggleSetting('immortal')"></div>
+    </div>
+    <div class="setting-row">
+      <span>Server Status</span>
+      <span id="server-status" style="color:#0f0">Online</span>
+    </div>
+    <button class="action-btn danger" onclick="apiPost('/api/stealth/panic', {})" style="margin-top:20px;">☠️ PANIC</button>
+    <button class="action-btn secondary" onclick="apiPost('/api/backup', {})" style="margin-top:8px;">💾 BACKUP</button>
+  </div>
+</div>
+
+<!-- CAMERA -->
+<div class="app-window" id="app-camera">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>📷 Camera</h2>
+  </div>
+  <div class="app-content" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <div style="font-size:64px; margin-bottom:20px;">📷</div>
+    <button class="action-btn" onclick="takePhoto()">📸 TAKE PHOTO</button>
+    <div id="photo-status" style="margin-top:16px; color:#888;"></div>
+  </div>
+</div>
+
+<!-- FILES -->
+<div class="app-window" id="app-files">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>📁 Files</h2>
+  </div>
+  <div class="app-content">
+    <div id="file-list" style="font-family:monospace; font-size:12px;"></div>
+    <button class="action-btn" onclick="listFiles()" style="margin-top:16px;">🔄 REFRESH</button>
+  </div>
+</div>
+
+<!-- PHONE -->
+<div class="app-window" id="app-phone">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>📞 Phone</h2>
+  </div>
+  <div class="app-content">
+    <div id="dialer" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:280px; margin:0 auto;">
+      <button class="dial-btn" onclick="dial('1')">1</button>
+      <button class="dial-btn" onclick="dial('2')">2</button>
+      <button class="dial-btn" onclick="dial('3')">3</button>
+      <button class="dial-btn" onclick="dial('4')">4</button>
+      <button class="dial-btn" onclick="dial('5')">5</button>
+      <button class="dial-btn" onclick="dial('6')">6</button>
+      <button class="dial-btn" onclick="dial('7')">7</button>
+      <button class="dial-btn" onclick="dial('8')">8</button>
+      <button class="dial-btn" onclick="dial('9')">9</button>
+      <button class="dial-btn" onclick="dial('*')">*</button>
+      <button class="dial-btn" onclick="dial('0')">0</button>
+      <button class="dial-btn" onclick="dial('#')">#</button>
+    </div>
+    <div id="dialed-number" style="text-align:center; font-size:24px; margin:20px 0;"></div>
+    <button class="action-btn" style="background:#0a5" onclick="makeCall()">📞 CALL</button>
+  </div>
+</div>
+
+<!-- SMS -->
+<div class="app-window" id="app-sms">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>✉️ Messages</h2>
+  </div>
+  <div class="app-content">
+    <input class="trade-input" id="sms-to" placeholder="Phone number">
+    <textarea class="trade-input" id="sms-body" placeholder="Message..." style="height:100px;"></textarea>
+    <button class="action-btn" onclick="sendSMS()">➤ SEND</button>
+    <button class="action-btn secondary" onclick="readSMS()">📥 READ</button>
+    <div id="sms-output" style="margin-top:16px; font-family:monospace; font-size:11px;"></div>
+  </div>
+</div>
+
+<!-- BROWSER -->
+<div class="app-window" id="app-browser">
+  <div class="app-header">
+    <span class="back" onclick="closeApp()">←</span>
+    <h2>🌐 Browser</h2>
+  </div>
+  <div class="app-content" style="padding:0;">
+    <input id="browser-url" style="width:100%; background:#222; border:none; padding:12px; color:#fff;" placeholder="https://..." value="https://google.com">
+    <iframe id="browser-frame" style="width:100%; height:calc(100% - 44px); border:none; background:#fff;"></iframe>
+  </div>
+</div>
+
+<style>
+  .dial-btn {
+    width:70px; height:70px; border-radius:35px;
+    background:rgba(255,255,255,0.1); border:none; color:#fff;
+    font-size:24px; cursor:pointer;
+  }
+  .dial-btn:active { background:rgba(255,255,255,0.2); }
+</style>
+
+<script>
+const API = 'http://localhost:8000';
+let currentApp = null;
+let dialed = '';
+
+// ─── CLOCK ───
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('clock-date').textContent = now.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── APP MANAGEMENT ───
+function openApp(name) {
+  document.querySelectorAll('.app-window').forEach(w => w.classList.remove('active'));
+  document.getElementById('app-' + name)?.classList.add('active');
+  currentApp = name;
+  document.getElementById('home').style.display = 'none';
+  document.getElementById('dock').style.display = 'none';
+}
+
+function closeApp() {
+  document.querySelectorAll('.app-window').forEach(w => w.classList.remove('active'));
+  currentApp = null;
+  document.getElementById('home').style.display = 'flex';
+  document.getElementById('dock').style.display = 'flex';
+}
+
+// ─── API ───
+async function apiPost(path, data) {
+  try {
+    const r = await fetch(`${API}${path}`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    return await r.json();
+  } catch(e) { return {error: e.message}; }
+}
+
+async function apiGet(path) {
+  try {
+    const r = await fetch(`${API}${path}`);
+    return await r.json();
+  } catch(e) { return {error: e.message}; }
+}
+
+// ─── TERMINAL ───
+async function termDeploy() {
+  const code = document.getElementById('term-code').value;
+  document.getElementById('term-output').textContent = '🚀 Deploying...';
+  const res = await apiPost('/api/terminal/deploy', { files: {'App.js': code}, main: 'App.js' });
+  document.getElementById('term-output').textContent = JSON.stringify(res, null, 2);
+}
+
+async function termRun() {
+  const code = document.getElementById('term-code').value;
+  document.getElementById('term-output').textContent = '▶ Running...';
+  const res = await apiPost('/api/terminal/run', { code, filename: 'temp.js' });
+  document.getElementById('term-output').textContent = res.output || res.error || 'Done';
+}
+
+// ─── HOTSPOT ───
+async function toggleHotspot() {
+  const toggle = document.getElementById('hotspot-toggle');
+  const isOn = toggle.classList.contains('on');
+  if (isOn) {
+    await apiPost('/api/phone/hotspot/off', {});
+    toggle.classList.remove('on');
+    document.getElementById('hotspot-icon').style.display = 'none';
+  } else {
+    await apiPost('/api/phone/hotspot/on', {});
+    toggle.classList.add('on');
+    document.getElementById('hotspot-icon').style.display = 'inline';
+  }
+}
+
+// ─── TRADE ───
+async function trade(action) {
+  const sym = document.getElementById('trade-sym').value || 'AAPL';
+  const qty = parseInt(document.getElementById('trade-qty').value) || 1;
+  const res = await apiPost(`/api/trading/${action}`, { symbol: sym, qty });
+  document.getElementById('trade-output').textContent = JSON.stringify(res, null, 2);
+  // Refresh prices
+  const price = await apiGet(`/api/trading/price/${sym}`);
+  document.getElementById(`price-${sym.toLowerCase()}`).textContent = `$${price.price || '?'}`;
+}
+
+// ─── BUILD ───
+async function doBuild() {
+  const name = document.getElementById('build-name').value;
+  const tag = document.getElementById('build-tag').value;
+  document.getElementById('build-output').textContent = '🚀 Building...';
+  const res = await apiPost('/api/web/build', { name, tagline: tag, theme: 'dark_empire', sections: ['hero','features','cta'] });
+  document.getElementById('build-output').textContent = JSON.stringify(res, null, 2);
+}
+
+async function doApp() {
+  document.getElementById('build-output').textContent = '📱 Building app... (requires React Native toolchain)';
+}
+
+// ─── CHAT ───
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML += `<div style="background:rgba(255,255,255,0.1); padding:12px; border-radius:12px; margin-bottom:8px; margin-left:40px;"><div style="color:#fff; font-size:12px; margin-bottom:4px;">You</div>${msg}</div>`;
+  messages.scrollTop = messages.scrollHeight;
+  
+  const res = await apiPost('/api/natural', { message: msg });
+  const reply = res.response || JSON.stringify(res);
+  messages.innerHTML += `<div style="background:rgba(0,255,255,0.1); padding:12px; border-radius:12px; margin-bottom:8px;"><div style="color:#0ff; font-size:12px; margin-bottom:4px;">Abel</div>${reply}</div>`;
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ─── SETTINGS ───
+async function toggleSetting(name) {
+  const toggle = document.getElementById('toggle-' + name);
+  toggle.classList.toggle('on');
+  if (name === 'stealth') {
+    if (toggle.classList.contains('on')) await apiPost('/api/stealth/enable', {});
+  }
+}
+
+// ─── CAMERA ───
+async function takePhoto() {
+  document.getElementById('photo-status').textContent = '📸 Taking photo...';
+  const res = await apiPost('/api/phone/photo', {});
+  document.getElementById('photo-status').textContent = res.path || res.error || 'Done';
+}
+
+// ─── FILES ───
+async function listFiles() {
+  document.getElementById('file-list').textContent = 'Loading...';
+  const res = await apiGet('/api/empire');
+  document.getElementById('file-list').textContent = JSON.stringify(res, null, 2);
+}
+
+// ─── PHONE ───
+function dial(digit) {
+  dialed += digit;
+  document.getElementById('dialed-number').textContent = dialed;
+}
+
+async function makeCall() {
+  if (!dialed) return;
+  const res = await apiPost('/api/phone/call', { number: dialed });
+  alert(JSON.stringify(res));
+  dialed = '';
+  document.getElementById('dialed-number').textContent = '';
+}
+
+// ─── SMS ───
+async function sendSMS() {
+  const to = document.getElementById('sms-to').value;
+  const body = document.getElementById('sms-body').value;
+  const res = await apiPost('/api/phone/sms', { to, body });
+  document.getElementById('sms-output').textContent = JSON.stringify(res, null, 2);
+}
+
+async function readSMS() {
+  const res = await apiGet('/api/phone/sms/read');
+  document.getElementById('sms-output').textContent = JSON.stringify(res, null, 2);
+}
+
+// ─── BROWSER ───
+document.getElementById('browser-url').addEventListener('change', (e) => {
+  document.getElementById('browser-frame').src = e.target.value;
+});
+
+// ─── BATTERY ───
+async function updateBattery() {
+  try {
+    const res = await apiGet('/api/phone/battery');
+    document.getElementById('battery').textContent = `🔋 ${res.percentage || '--'}%`;
+  } catch(e) {}
+}
+setInterval(updateBattery, 30000);
+updateBattery();
+
+// ─── HEALTH ───
+async function checkHealth() {
+  const h = await apiGet('/api/health');
+  document.getElementById('server-status').textContent = h.version ? 'Online 🟢' : 'Offline 🔴';
+  document.getElementById('server-status').style.color = h.version ? '#0f0' : '#f00';
+}
+setInterval(checkHealth, 10000);
+checkHealth();
+
+// ─── INIT ───
+// Prevent pull-to-refresh on mobile
+document.body.addEventListener('touchmove', (e) => { if (e.target === document.body) e.preventDefault(); }, { passive: false });
+
+console.log('⚡ LilJR Phone OS loaded');
+</script>
+
+</body>
+</html>
