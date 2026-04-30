@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# LILJR CONTROL v6.2 — Honest State, Real Checks
+# LILJR CONTROL v9.0 — Empire Edition. No old servers.
 # Run: bash ~/lj <command> [args]
 # ═══════════════════════════════════════════════════════════════
 
@@ -10,32 +10,44 @@ shift 2>/dev/null || true
 
 case "$CMD" in
   start)
-    cd ~/liljr-autonomous/backend 2>/dev/null || {
-        echo "❌ Backend directory not found. Run: bash ~/lj install"
-        exit 1
-    }
-    # Use v6.3 if available, fallback to v6.2, then v6
-    SERVER="server_v6.3.py"
-    [ ! -f "$SERVER" ] && SERVER="server_v6.2.py"
-    [ ! -f "$SERVER" ] && SERVER="server_v6.py"
-    nohup python "$SERVER" > ~/liljr.log 2>&1 &
+    # NUCLEAR KILL — destroy every old server first
+    pkill -9 -f "python.*server" 2>/dev/null || true
+    pkill -9 -f "server_v[0-9]" 2>/dev/null || true
+    pkill -9 -f "liljr_os" 2>/dev/null || true
+    pkill -9 -f "watchdog" 2>/dev/null || true
     sleep 2
-    HEALTH=$(curl -s "$BASE/api/health" 2>/dev/null)
-    if [ -n "$HEALTH" ]; then
+    
+    # Start v8 ONLY
+    SERVER="~/liljr-autonomous/server_v8.py"
+    if [ ! -f "$SERVER" ]; then
+        echo "❌ server_v8.py not found. Run: cd ~/liljr-autonomous && git pull origin main"
+        exit 1
+    fi
+    termux-wake-lock 2>/dev/null || true
+    nohup python3 "$SERVER" > /dev/null 2>&1 &
+    sleep 3
+    HEALTH=$(curl -s --max-time 3 "$BASE/api/health" 2>/dev/null)
+    if echo "$HEALTH" | grep -q "liljr-empire-8.0"; then
+        echo "✅ LilJR Empire v8.0 running"
         echo "$HEALTH"
     else
-        echo "⚠️ Server starting (check: bash ~/lj log)"
+        echo "⚠️ Server starting. Check: bash ~/lj status"
     fi
     ;;
   stop)
-    pkill -9 -f "server_v6" && echo "Stopped" || echo "Not running"
+    pkill -9 -f "python.*server" 2>/dev/null || true
+    pkill -9 -f "server_v[0-9]" 2>/dev/null || true
+    pkill -9 -f "liljr_os" 2>/dev/null || true
+    pkill -9 -f "watchdog" 2>/dev/null || true
+    termux-wake-unlock 2>/dev/null || true
+    echo "Stopped all LilJR processes."
     ;;
   status)
-    HEALTH=$(curl -s "$BASE/api/health" 2>/dev/null)
-    if [ -n "$HEALTH" ]; then
-        echo "$HEALTH"
+    HEALTH=$(curl -s --max-time 3 "$BASE/api/health" 2>/dev/null)
+    if echo "$HEALTH" | grep -q "liljr-empire-8.0"; then
+      echo "$HEALTH"
     else
-        echo "Not running"
+      echo "Not running or wrong version"
     fi
     ;;
   install)
@@ -44,8 +56,9 @@ case "$CMD" in
         echo "📦 Cloning repo..."
         cd ~ && git clone https://github.com/signsafepro-create/liljr-autonomous.git
     fi
-    pip install flask flask-cors requests 2>&1 | tail -3
-    echo "Done"
+    # v8 needs NO pip packages. Pure Python.
+    echo "✅ LilJR Empire ready. No pip install needed."
+    echo "Start: bash ~/lj start"
     ;;
   # ─── STATE ───
   state)

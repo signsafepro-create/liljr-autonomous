@@ -917,7 +917,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json_response(engine.discover(target))
         
         else:
-            self._json_response({"status": "ok", "message": "LilJR Empire v8.0", "endpoints": "/api/health, /api/empire, /api/trading/*, /api/watchlist, /api/rules, /api/ai/chat, /api/search, /api/knowledge, /api/plugins, /api/connections, /api/platforms, /api/logs"})
+            self._json_response({"error": "Unknown endpoint", "path": path, "version": VERSION}, 404)
     
     def do_POST(self):
         path = self.path

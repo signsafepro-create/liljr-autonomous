@@ -1,38 +1,39 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# LILJR WATCHDOG — Auto-restart if server dies
-# Run: nohup bash ~/liljr_watchdog.sh > /dev/null 2>&1 &
+# LILJR WATCHDOG v8 — Auto-restart if server dies
+# NEVER starts old v6 servers. Only v8.
+# Run: nohup bash ~/liljr-autonomous/scripts/watchdog.sh > /dev/null 2>&1 &
 # ═══════════════════════════════════════════════════════════════
 
 REPO="$HOME/liljr-autonomous"
 LOG="$HOME/liljr_watchdog.log"
+SERVER="$REPO/server_v8.py"
 
-echo "[$(date)] Watchdog started" >> "$LOG"
+echo "[$(date)] Watchdog v8 started" >> "$LOG"
 
 while true; do
-    # Check if server is running
-    if ! curl -s http://localhost:8000/api/health > /dev/null 2>&1; then
-        echo "[$(date)] Server DOWN. Restarting..." >> "$LOG"
+    # Check if v8 server is healthy
+    HEALTH=$(curl -s --max-time 3 http://localhost:8000/api/health 2>/dev/null)
+    if echo "$HEALTH" | grep -q "liljr-empire-8.0"; then
+        # v8 is alive and healthy — do nothing
+        :
+    else
+        echo "[$(date)] Server DOWN or wrong version. Restarting v8..." >> "$LOG"
         
-        # Kill any stale processes
-        pkill -9 -f "server_v6" 2>/dev/null || true
+        # NUCLEAR KILL — destroy ALL Python servers, old watchdogs, everything
+        pkill -9 -f "python.*server" 2>/dev/null || true
+        pkill -9 -f "server_v[0-9]" 2>/dev/null || true
+        pkill -9 -f "liljr_os" 2>/dev/null || true
+        pkill -9 -f "watchdog" 2>/dev/null || true
         sleep 2
         
-        # Start server (use v6.3 if available, fallback to v6.2, then v6)
-        cd "$REPO/backend" 2>/dev/null || cd "$REPO" 2>/dev/null
-        SERVER="server_v6.3.py"
-        [ ! -f "$SERVER" ] && SERVER="server_v6.2.py"
-        [ ! -f "$SERVER" ] && SERVER="server_v6.py"
-        nohup python3 "$SERVER" > "$HOME/liljr.log" 2>&1 &
-        
-        echo "[$(date)] Server restarted (PID: $!)" >> "$LOG"
-        
-        # Notify via Telegram if possible
-        TOKEN=$(grep TELEGRAM_BOT_TOKEN ~/.bashrc 2>/dev/null | grep -o 'sk_[^"]*' | head -1 || echo "")
-        if [ -n "$TOKEN" ]; then
-            curl -s "https://api.telegram.org/bot$TOKEN/sendMessage" \
-                -d "chat_id=$(grep TELEGRAM_CHAT_ID ~/.bashrc 2>/dev/null | grep -o '[0-9]*' | head -1)" \
-                -d "text=🚨%20LilJR%20restarted%20after%20crash" > /dev/null 2>&1 || true
+        # Start v8 ONLY
+        if [ -f "$SERVER" ]; then
+            termux-wake-lock 2>/dev/null || true
+            nohup python3 "$SERVER" > /dev/null 2>&1 &
+            echo "[$(date)] v8 restarted (PID: $!)" >> "$LOG"
+        else
+            echo "[$(date)] ERROR: $SERVER not found" >> "$LOG"
         fi
         
         sleep 5

@@ -10,9 +10,10 @@ SERVER="$HOME/liljr-autonomous/server_v8.py"
 echo "[BULLETPROOF] $(date) Starting..." >> "$LOG"
 
 # 1. Kill any old servers (nuclear)
-pkill -9 -f "python.*8000" 2>/dev/null
+pkill -9 -f "python.*server" 2>/dev/null
 pkill -9 -f "server_v[0-9]" 2>/dev/null
 pkill -9 -f "liljr_os" 2>/dev/null
+pkill -9 -f "watchdog" 2>/dev/null
 sleep 2
 
 # 2. Acquire wake lock (keeps CPU alive)
