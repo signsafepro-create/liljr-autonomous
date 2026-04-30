@@ -1051,7 +1051,20 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json_response({"error": "sw.js not found"}, 404)
         
-        elif path.startswith('/phone/icon'):
+        elif path == '/cloud' or path == '/cloud/':
+            # Serve LilJR Cloud Dashboard
+            cloud_path = os.path.join(HOME, 'liljr-autonomous', 'cloud_dashboard.html')
+            if os.path.exists(cloud_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(cloud_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self._json_response({"error": "cloud_dashboard.html not found"}, 404)
+        
+        elif path == '/phone/icon':
             icon_path = os.path.join(HOME, 'liljr-autonomous', 'phone', 'icon.svg')
             if os.path.exists(icon_path):
                 self.send_response(200)

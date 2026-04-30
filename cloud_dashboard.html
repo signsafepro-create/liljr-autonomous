@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LilJR Cloud</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        .status-bar span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .dot.online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        .dot.offline { background: #ff4444; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+        .card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #00d4ff;
+        }
+        .card-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .card-sub {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .section {
+            padding: 0 20px 20px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #00d4ff;
+        }
+        .log-box {
+            background: #0f0f1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #00ff88;
+        }
+        .btn {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn.danger {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+        }
+        .btn.success {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #222;
+            font-size: 14px;
+        }
+        .info-label { color: #888; }
+        .info-value { color: #fff; font-weight: 600; }
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ LilJR Cloud</h1>
+        <div class="status-bar">
+            <span><span class="dot online"></span> Brain Online</span>
+            <span>📡 <span id="ip">Loading...</span></span>
+            <span>🔋 <span id="uptime">Loading...</span></span>
+            <span>🕐 <span id="clock">--:--</span></span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card" onclick="openTerminal()">
+            <div class="card-icon">⌨️</div>
+            <div class="card-title">Terminal</div>
+            <div class="card-sub">Code & Deploy</div>
+        </div>
+        <div class="card" onclick="openPhone()">
+            <div class="card-icon">📱</div>
+            <div class="card-title">Phone Remote</div>
+            <div class="card-sub">Control Device</div>
+        </div>
+        <div class="card" onclick="openTrade()">
+            <div class="card-icon">📈</div>
+            <div class="card-title">Trading</div>
+            <div class="card-sub">Buy & Sell</div>
+        </div>
+        <div class="card" onclick="openBuild()">
+            <div class="card-icon">🚀</div>
+            <div class="card-title">Build</div>
+            <div class="card-sub">Websites & Apps</div>
+        </div>
+        <div class="card" onclick="openFiles()">
+            <div class="card-icon">📁</div>
+            <div class="card-title">Files</div>
+            <div class="card-sub">Cloud Storage</div>
+        </div>
+        <div class="card" onclick="openSearch()">
+            <div class="card-icon">🔍</div>
+            <div class="card-title">Deep Search</div>
+            <div class="card-sub">Web Intelligence</div>
+        </div>
+        <div class="card" onclick="openChat()">
+            <div class="card-icon">💬</div>
+            <div class="card-title">ABEL Chat</div>
+            <div class="card-sub">Natural Language</div>
+        </div>
+        <div class="card" onclick="openStealth()">
+            <div class="card-icon">🛡️</div>
+            <div class="card-title">Security</div>
+            <div class="card-sub">Stealth & Shield</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">System Info</div>
+        <div class="info-row">
+            <span class="info-label">Server Version</span>
+            <span class="info-value" id="version">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Health Score</span>
+            <span class="info-value" id="health">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Trades Today</span>
+            <span class="info-value" id="trades">Loading...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Websites Built</span>
+            <span class="info-value" id="websites">Loading...</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Live Log</div>
+        <div class="log-box" id="log-box">[Cloud initialized] Waiting for connection...</div>
+    </div>
+
+    <div class="section" style="text-align: center; padding: 20px;">
+        <button class="btn" onclick="backup()">💾 Backup</button>
+        <button class="btn success" onclick="restart()">🔄 Restart</button>
+        <button class="btn danger" onclick="panic()">☠️ Panic</button>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        async function loadStatus() {
+            try {
+                const r = await fetch(API + '/health');
+                const data = await r.json();
+                document.getElementById('version').textContent = data.version || 'unknown';
+                document.getElementById('health').textContent = (data.health_score || 0) + '%';
+                document.getElementById('uptime').textContent = Math.floor((data.uptime || 0) / 60) + 'm';
+                document.getElementById('trades').textContent = data.trade_count || 0;
+            } catch(e) {
+                document.getElementById('version').textContent = 'offline';
+            }
+        }
+
+        async function loadIP() {
+            try {
+                const r = await fetch('https://api.ipify.org?format=json');
+                const data = await r.json();
+                document.getElementById('ip').textContent = data.ip;
+            } catch(e) {
+                document.getElementById('ip').textContent = 'local';
+            }
+        }
+
+        function log(msg) {
+            const box = document.getElementById('log-box');
+            box.innerHTML += '\n[' + new Date().toLocaleTimeString() + '] ' + msg;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function openTerminal() { window.open('/terminal', '_blank'); log('Terminal opened'); }
+        function openPhone() { window.open('/phone', '_blank'); log('Phone remote opened'); }
+        function openTrade() { window.open('/api/trading/portfolio', '_blank'); log('Trading opened'); }
+        function openBuild() { 
+            const name = prompt('Project name?');
+            if (name) {
+                fetch(API + '/web/build', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})})
+                .then(r => r.json()).then(d => log('Built: ' + JSON.stringify(d)));
+            }
+        }
+        function openFiles() { log('File manager: Use SFTP or terminal'); }
+        function openSearch() { 
+            const q = prompt('Search query?');
+            if (q) {
+                fetch(API + '/search?q=' + encodeURIComponent(q)).then(r => r.json()).then(d => log('Search: ' + d.results?.length + ' results'));
+            }
+        }
+        function openChat() { window.open('/api/natural', '_blank'); log('Chat opened'); }
+        function openStealth() { 
+            fetch(API + '/stealth/status').then(r => r.json()).then(d => log('Stealth: ' + JSON.stringify(d)));
+        }
+        function backup() { log('Backup initiated...'); }
+        function restart() { 
+            if (confirm('Restart LilJR brain?')) {
+                fetch(API + '/health').then(r => r.json()).then(d => log('Restart: ' + d.status));
+            }
+        }
+        function panic() { 
+            if (confirm('PANIC MODE? This hides everything.')) {
+                fetch(API + '/stealth/panic', {method: 'POST'}).then(r => r.json()).then(d => log('PANIC: ' + JSON.stringify(d)));
+            }
+        }
+
+        loadStatus();
+        loadIP();
+        setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>
