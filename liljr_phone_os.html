@@ -2,10 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LilJR">
 <meta name="mobile-web-app-capable" content="yes">
-<title>LilJR OS</title>
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/phone/icon.png">
+<title>LilJR</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
   body { background:#000; color:#fff; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
@@ -634,6 +639,11 @@ setInterval(checkHealth, 10000);
 checkHealth();
 
 // ─── INIT ───
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 // Prevent pull-to-refresh on mobile
 document.body.addEventListener('touchmove', (e) => { if (e.target === document.body) e.preventDefault(); }, { passive: false });
 

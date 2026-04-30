@@ -1026,6 +1026,45 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json_response({"error": "liljr_phone_os.html not found"}, 404)
         
+        elif path == '/manifest.json':
+            manifest_path = os.path.join(HOME, 'liljr-autonomous', 'manifest.json')
+            if os.path.exists(manifest_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(manifest_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self._json_response({"error": "manifest.json not found"}, 404)
+        
+        elif path == '/sw.js':
+            sw_path = os.path.join(HOME, 'liljr-autonomous', 'sw.js')
+            if os.path.exists(sw_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/javascript')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(sw_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self._json_response({"error": "sw.js not found"}, 404)
+        
+        elif path.startswith('/phone/icon'):
+            icon_path = os.path.join(HOME, 'liljr-autonomous', 'phone', 'icon.svg')
+            if os.path.exists(icon_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/svg+xml')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                with open(icon_path, 'r') as f:
+                    self.wfile.write(f.read().encode())
+            else:
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/svg+xml')
+                self.end_headers()
+                self.wfile.write(b'<svg xmlns="http://www.w3.org/2000/svg"><rect width="192" height="192" fill="#0ff"/><text x="96" y="120" text-anchor="middle" font-size="72" fill="#fff">LJ</text></svg>')
+        
         elif path == '/api/empire':
             self._json_response(engine.empire_status())
         
