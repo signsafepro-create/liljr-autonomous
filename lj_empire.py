@@ -443,7 +443,7 @@ NATURAL LANGUAGE (Talk to LilJR):
   python3 ~/lj_empire.py chat "search AI trends"
   python3 ~/lj_empire.py chat "buy 5 AAPL"
   python3 ~/lj_empire.py chat "deploy to myrepo/site"
-
+    """)
 
 if __name__ == '__main__':
     main()
