@@ -144,10 +144,7 @@ SLANG_MAP = {
 }
 
 # ─── WAKE PHRASES ───
-WAKE_PHRASES = [
-    "yo junior", "hey junior", "junior", "little junior", "liljr", "lj",
-    "yo lil jr", "hey lil jr", "lil jr", "little jr",
-]
+WAKE_PHRASES = ["yo junior"]
 
 # ─── CONVERSATIONAL SOUL ───
 class ConversationalSoul:
