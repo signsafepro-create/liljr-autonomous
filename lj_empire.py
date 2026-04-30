@@ -340,6 +340,42 @@ def main():
             return
         print(json.dumps(api_post('/api/natural', {"text": text}), indent=2))
 
+    # ═══ QUICKFIRE — Fast. Smart. Witty. ═══
+    elif cmd == 'qf':
+        import quickfire
+        qf = quickfire.QuickFire()
+        if len(sys.argv) > 2:
+            sub = sys.argv[2]
+            if sub == 'build' and len(sys.argv) > 3:
+                print(qf.build('landing', sys.argv[3]))
+            elif sub == 'fix':
+                print(qf.fix())
+            elif sub == 'search' and len(sys.argv) > 3:
+                print(qf.search(sys.argv[3]))
+            elif sub == 'market':
+                print(qf.market())
+            elif sub == 'buy' and len(sys.argv) > 3:
+                qty = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+                print(qf.trade('buy', sys.argv[3], qty))
+            elif sub == 'sell' and len(sys.argv) > 3:
+                qty = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+                print(qf.trade('sell', sys.argv[3], qty))
+            elif sub == 'chat' and len(sys.argv) > 3:
+                print(qf.chat(' '.join(sys.argv[3:])))
+            elif sub == 'status':
+                print(json.dumps(qf.status(), indent=2))
+            else:
+                # Treat as direct chat
+                print(qf.chat(' '.join(sys.argv[2:])))
+        else:
+            print("QUICKFIRE — Type your command:")
+            print('  qf build MyApp')
+            print('  qf fix')
+            print('  qf search "AI trends"')
+            print('  qf market')
+            print('  qf buy AAPL 5')
+            print('  qf "build me a dark landing page"')
+
     # ═══ HELP ═══
     elif cmd in ('help', ''):
         print_help()
@@ -436,13 +472,13 @@ WEB BUILDER v2:
   python3 ~/lj_empire.py web-themes                          — Show themes
   python3 ~/lj_empire.py web-deploy user/repo                 — Deploy to GitHub Pages
 
-NATURAL LANGUAGE (Talk to LilJR):
-  python3 ~/lj_empire.py chat "build me a fitness landing page"
-  python3 ~/lj_empire.py chat "make it dark theme"
-  python3 ~/lj_empire.py chat "fix my code"
-  python3 ~/lj_empire.py chat "search AI trends"
-  python3 ~/lj_empire.py chat "buy 5 AAPL"
-  python3 ~/lj_empire.py chat "deploy to myrepo/site"
+QUICKFIRE — Fast. Smart. Witty.:
+  python3 ~/lj_empire.py qf "build me a dark landing page"
+  python3 ~/lj_empire.py qf fix
+  python3 ~/lj_empire.py qf search "AI trends"
+  python3 ~/lj_empire.py qf market
+  python3 ~/lj_empire.py qf buy AAPL 5
+  python3 ~/lj_empire.py qf chat "make it cyberpunk"
     """)
 
 if __name__ == '__main__':
