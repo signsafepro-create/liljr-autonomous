@@ -66,6 +66,14 @@ case "$CMD" in
         ensure_server
         python3 ~/liljr_consciousness.py "$@"
         ;;
+    abel|a|do|ask)
+        ensure_server
+        if [ $# -eq 0 ]; then
+            python3 ~/liljr_abel.py
+        else
+            python3 ~/liljr_abel.py "$@"
+        fi
+        ;;
     start|s)
         nohup python3 ~/server_v8.py > ~/server.log 2>&1 &
         sleep 3
