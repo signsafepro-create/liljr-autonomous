@@ -5,6 +5,9 @@ Pure Python. No curl. Lightning fast. Bulletproof.
 """
 import sys, json, urllib.request, os
 
+# Add repo to path so persona_engine, vision_engine, quickfire can be imported
+sys.path.insert(0, os.path.expanduser('~/liljr-autonomous'))
+
 BASE = "http://localhost:8000"
 
 def api_get(path):
