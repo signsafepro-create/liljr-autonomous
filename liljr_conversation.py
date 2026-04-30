@@ -98,7 +98,7 @@ class VoiceEngine:
         """Listen for voice input. Returns text or None."""
         try:
             result = subprocess.run(
-                ['termux-speech-to-text', '-l', 'en-US'],
+                ['termux-speech-to-text'],
                 capture_output=True, text=True, timeout=duration + 3
             )
             heard = result.stdout.strip()
