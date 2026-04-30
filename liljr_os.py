@@ -51,6 +51,8 @@ MEMORY = {
     'learning': []
 }
 
+CONNECTIONS_FILE = os.path.expanduser('~/liljr_connections.json')
+
 PRICES = {
     'AAPL': 175, 'TSLA': 240, 'NVDA': 890, 'GOOGL': 175,
     'AMZN': 185, 'MSFT': 420, 'BTC': 65000, 'ETH': 3500,
@@ -409,6 +411,92 @@ class LilJREngine:
             "standalone": True,
             "time": str(datetime.now())
         }
+    
+    # ─── UNIVERSAL CONNECTOR — Hook to any server ───
+    def register_connection(self, name, base_url, headers=None, auth_type=None, auth_token=None):
+        """Register a new server connection."""
+        if 'connections' not in STATE:
+            STATE['connections'] = {}
+        
+        STATE['connections'][name] = {
+            'base_url': base_url.rstrip('/'),
+            'headers': headers or {},
+            'auth_type': auth_type,
+            'auth_token': auth_token,
+            'created': str(datetime.now()),
+            'last_used': None,
+            'requests': 0
+        }
+        save_state()
+        return {"status": "connected", "name": name, "url": base_url}
+    
+    def remove_connection(self, name):
+        """Remove a connection."""
+        if 'connections' in STATE and name in STATE['connections']:
+            del STATE['connections'][name]
+            save_state()
+            return {"status": "removed", "name": name}
+        return {"status": "not_found", "name": name}
+    
+    def list_connections(self):
+        """List all registered connections."""
+        return list(STATE.get('connections', {}).keys())
+    
+    def send_to(self, name, path, method='GET', data=None, params=None):
+        """Send a request to any registered server."""
+        if 'connections' not in STATE or name not in STATE['connections']:
+            return {"status": "error", "reason": f"Connection '{name}' not registered"}
+        
+        conn = STATE['connections'][name]
+        url = f"{conn['base_url']}{path}"
+        
+        if params:
+            url += '?' + urllib.parse.urlencode(params)
+        
+        headers = dict(conn['headers'])
+        if conn.get('auth_type') == 'bearer' and conn.get('auth_token'):
+            headers['Authorization'] = f"Bearer {conn['auth_token']}"
+        elif conn.get('auth_type') == 'api_key' and conn.get('auth_token'):
+            headers['X-API-Key'] = conn['auth_token']
+        
+        try:
+            if method == 'GET':
+                req = urllib.request.Request(url, headers=headers)
+            else:
+                payload = json.dumps(data or {}).encode()
+                req = urllib.request.Request(url, data=payload, headers={**headers, 'Content-Type': 'application/json'}, method=method)
+            
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                body = resp.read().decode('utf-8', errors='ignore')
+                try:
+                    parsed = json.loads(body)
+                except:
+                    parsed = {"raw": body[:500]}
+                
+                conn['last_used'] = str(datetime.now())
+                conn['requests'] = conn.get('requests', 0) + 1
+                save_state()
+                
+                return {"status": "ok", "code": resp.status, "data": parsed}
+        
+        except Exception as e:
+            return {"status": "error", "reason": str(e)}
+    
+    def discover(self, base_url):
+        """Probe a server to see what endpoints exist."""
+        common_paths = ['/api/health', '/health', '/status', '/api', '/', '/api/v1']
+        found = []
+        
+        for path in common_paths:
+            try:
+                url = f"{base_url.rstrip('/')}{path}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'LilJR/1.0'})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    found.append({"path": path, "status": resp.status, "alive": True})
+            except Exception as e:
+                found.append({"path": path, "status": str(e), "alive": False})
+        
+        return {"target": base_url, "endpoints": found}
 
 # ═══════════════════════════════════════════════════════════════
 # HTTP SERVER — Built-in, no Flask needed
@@ -466,6 +554,16 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/plugins':
             self._json_response({"plugins": list(STATE['plugins'].keys())})
         
+        elif path == '/api/connections':
+            self._json_response({"connections": engine.list_connections()})
+        
+        elif path.startswith('/api/connect/discover/'):
+            target = path.split('/api/connect/discover/')[-1]
+            target = urllib.parse.unquote(target)
+            if not target.startswith('http'):
+                target = 'http://' + target
+            self._json_response(engine.discover(target))
+        
         elif path == '/':
             self._json_response({"message": "LilJR OS v1.0 — Standalone. No APIs. No strings.", "endpoints": "/api/health, /api/trading/*, /api/ai/*, /api/memory, /api/search"})
         
@@ -520,6 +618,21 @@ class Handler(BaseHTTPRequestHandler):
         
         elif path == '/api/plugin/run':
             self._json_response(engine.run_plugin(data.get('name'), *data.get('args', [])))
+        
+        elif path == '/api/connect/register':
+            self._json_response(engine.register_connection(
+                data.get('name'), data.get('url'),
+                data.get('headers'), data.get('auth_type'), data.get('auth_token')
+            ))
+        
+        elif path == '/api/connect/send':
+            self._json_response(engine.send_to(
+                data.get('name'), data.get('path', '/'),
+                data.get('method', 'GET'), data.get('data'), data.get('params')
+            ))
+        
+        elif path == '/api/connect/remove':
+            self._json_response(engine.remove_connection(data.get('name')))
         
         else:
             self._json_response({"status": "not_found"}, 404)

@@ -95,7 +95,6 @@ case "$1" in
   
   # ═══ PLUGINS — SELF EXTENDING ═══
   plugin)
-    # Read code from stdin or file
     if [ -f "$3" ]; then
       CODE=$(cat "$3")
       NAME="$2"
@@ -111,6 +110,41 @@ case "$1" in
     ;;
   plugins)
     curl -s "$BASE/api/plugins" && echo ""
+    ;;
+  
+  # ═══ CONNECTOR — Hook to any server ═══
+  connect)
+    # Register a new server connection
+    # Usage: connect NAME URL [auth_type] [auth_token]
+    NAME="$2"
+    URL="$3"
+    AUTH_TYPE="${4:-none}"
+    AUTH_TOKEN="${5:-}"
+    curl -s -X POST "$BASE/api/connect/register" -H "Content-Type: application/json" -d "{\"name\":\"$NAME\",\"url\":\"$URL\",\"auth_type\":\"$AUTH_TYPE\",\"auth_token\":\"$AUTH_TOKEN\"}" && echo ""
+    ;;
+  disconnect)
+    curl -s -X POST "$BASE/api/connect/remove" -H "Content-Type: application/json" -d "{\"name\":\"$2\"}" && echo ""
+    ;;
+  connections)
+    curl -s "$BASE/api/connections" && echo ""
+    ;;
+  send)
+    # Send request to connected server
+    # Usage: send NAME PATH [method] [json_data]
+    NAME="$2"
+    PATH="$3"
+    METHOD="${4:-GET}"
+    DATA="${5:-{}}"
+    curl -s -X POST "$BASE/api/connect/send" -H "Content-Type: application/json" -d "{\"name\":\"$NAME\",\"path\":\"$PATH\",\"method\":\"$METHOD\",\"data\":$DATA}" && echo ""
+    ;;
+  discover)
+    # Probe a server for endpoints
+    TARGET="$2"
+    if [[ ! $TARGET == http* ]]; then
+      TARGET="http://$TARGET"
+    fi
+    ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TARGET'))")
+    curl -s "$BASE/api/connect/discover/$ENCODED" && echo ""
     ;;
   
   # ═══ PERSISTENCE ═══
@@ -164,8 +198,18 @@ case "$1" in
     echo "  bash ~/lj_os run-plugin myplugin    — Execute"
     echo "  bash ~/lj_os plugins                — List"
     echo ""
-    echo "Example plugin:"
-    echo '  echo "def run(): return {\"hello\": \"world\"}" | bash ~/lj_os plugin hello'
+    echo "CONNECTOR — HOOK ANY SERVER:"
+    echo "  bash ~/lj_os connect alpaca https://paper-api.alpaca.markets bearer YOUR_KEY"
+    echo "  bash ~/lj_os connect github https://api.github.com api_key YOUR_TOKEN"
+    echo "  bash ~/lj_os connections            — List connections"
+    echo "  bash ~/lj_os send alpaca /v2/account GET"
+    echo "  bash ~/lj_os send alpaca /v2/orders POST '{\"symbol\":\"AAPL\"}'"
+    echo "  bash ~/lj_os discover api.example.com — Probe for endpoints"
+    echo "  bash ~/lj_os disconnect alpaca      — Remove connection"
+    echo ""
+    echo "Example:"
+    echo "  bash ~/lj_os connect alpaca https://paper-api.alpaca.markets api_key PKxxxxx"
+    echo "  bash ~/lj_os send alpaca /v2/positions GET"
     ;;
   
   *)
