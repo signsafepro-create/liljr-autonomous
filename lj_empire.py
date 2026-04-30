@@ -300,9 +300,45 @@ def main():
     elif cmd == 'web-themes':
         print(json.dumps(api_get('/api/web/themes'), indent=2))
     
+    # ═══ WEB BUILDER v2 ═══
+    elif cmd == 'web-build':
+        name = sys.argv[2] if len(sys.argv) > 2 else 'MySite'
+        tagline = sys.argv[3] if len(sys.argv) > 3 else 'Built by LilJR'
+        theme = sys.argv[4] if len(sys.argv) > 4 else 'dark_empire'
+        print(json.dumps(api_post('/api/web/build', {"name": name, "tagline": tagline, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-app':
+        name = sys.argv[2] if len(sys.argv) > 2 else 'MyApp'
+        theme = sys.argv[3] if len(sys.argv) > 3 else 'dark_empire'
+        print(json.dumps(api_post('/api/web/app', {"name": name, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-restyle':
+        page = sys.argv[2] if len(sys.argv) > 2 else 'index'
+        theme = sys.argv[3] if len(sys.argv) > 3 else 'cyberpunk'
+        print(json.dumps(api_post('/api/web/restyle', {"page": page, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-modify':
+        page = sys.argv[2] if len(sys.argv) > 2 else 'index'
+        instruction = ' '.join(sys.argv[3:]) if len(sys.argv) > 3 else 'add pricing section'
+        print(json.dumps(api_post('/api/web/modify', {"page": page, "instruction": instruction}), indent=2))
+    
+    elif cmd == 'web-list':
+        print(json.dumps(api_get('/api/web/list'), indent=2))
+    
+    elif cmd == 'web-themes':
+        print(json.dumps(api_get('/api/web/themes'), indent=2))
+    
     elif cmd == 'web-deploy':
         repo = sys.argv[2] if len(sys.argv) > 2 else 'user/repo'
         print(json.dumps(api_post('/api/web/deploy', {"repo": repo}), indent=2))
+    
+    # ═══ NATURAL LANGUAGE ═══
+    elif cmd == 'chat':
+        text = ' '.join(sys.argv[2:])
+        if not text:
+            print("Usage: python3 ~/lj_empire.py chat 'build me a landing page for fitness'")
+            return
+        print(json.dumps(api_post('/api/natural', {"text": text}), indent=2))
 
     # ═══ HELP ═══
     elif cmd in ('help', ''):
@@ -399,6 +435,14 @@ WEB BUILDER v2:
   python3 ~/lj_empire.py web-list                              — List all sites
   python3 ~/lj_empire.py web-themes                          — Show themes
   python3 ~/lj_empire.py web-deploy user/repo                 — Deploy to GitHub Pages
+
+NATURAL LANGUAGE (Talk to LilJR):
+  python3 ~/lj_empire.py chat "build me a fitness landing page"
+  python3 ~/lj_empire.py chat "make it dark theme"
+  python3 ~/lj_empire.py chat "fix my code"
+  python3 ~/lj_empire.py chat "search AI trends"
+  python3 ~/lj_empire.py chat "buy 5 AAPL"
+  python3 ~/lj_empire.py chat "deploy to myrepo/site"
 
 
 if __name__ == '__main__':

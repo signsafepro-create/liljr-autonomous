@@ -1245,8 +1245,89 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json_response({"error": "Web builder not available"})
         
+        # ═══ WEB BUILDER v2 ═══
+        elif path == '/api/web/build':
+            if engine.web_builder:
+                sections = data.get('sections', [
+                    {"type": "hero", "title": data.get('name', 'Site'), "text": data.get('tagline', ''), "cta": "Get Started"},
+                    {"type": "features", "title": "Features", "items": [{"title": "Feature 1", "desc": "Description"}]},
+                    {"type": "cta", "title": "Ready?", "text": "Join now.", "cta": "Start"}
+                ])
+                result = engine.web_builder.generate_business_site(
+                    data.get('name', 'Site'),
+                    data.get('tagline', 'Built by LilJR'),
+                    sections,
+                    data.get('theme', 'dark_empire'),
+                    data.get('pages', ['index'])
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/app':
+            if engine.web_builder:
+                features = data.get('features', [
+                    {"title": "Counter", "type": "counter", "id": "c1"},
+                    {"title": "Form", "type": "form", "fields": ["Name", "Email"]}
+                ])
+                result = engine.web_builder.generate_web_app(
+                    data.get('name', 'App'),
+                    features,
+                    data.get('theme', 'dark_empire')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/restyle':
+            if engine.web_builder:
+                result = engine.web_builder.restyle(
+                    data.get('page', 'index'),
+                    data.get('theme', 'cyberpunk')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/modify':
+            if engine.web_builder:
+                result = engine.web_builder.modify_page(
+                    data.get('page', 'index'),
+                    data.get('instruction', 'add pricing section')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/list':
+            if engine.web_builder:
+                self._json_response({"sites": engine.web_builder.list_sites()})
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/deploy':
+            if engine.web_builder:
+                result = engine.web_builder.deploy_to_github(
+                    data.get('repo', 'user/repo'),
+                    data.get('branch', 'main')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
         elif path == '/api/web/themes':
             self._json_response({"themes": list(WebBuilderV2.THEMES.keys())})
+        
+        # ═══ NATURAL LANGUAGE ═══
+        elif path == '/api/natural':
+            try:
+                from natural_language import NaturalCommander
+                text = data.get('text', '')
+                commander = NaturalCommander(engine)
+                result = commander.execute(text)
+                self._json_response(result)
+            except Exception as e:
+                self._json_response({"error": str(e), "note": "natural_language.py may not be available"})
         
         else:
             self._json_response({"error": "Unknown endpoint"}, 404)
