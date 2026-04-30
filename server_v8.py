@@ -62,6 +62,7 @@ AUTONOMOUS_AVAILABLE = any([AUTONOMOUS_CODER, AUTONOMOUS_MARKETING, AUTONOMOUS_S
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
+HOME = os.path.expanduser("~")
 DB_PATH = os.path.expanduser('~/liljr_empire.db')
 STATE_FILE = os.path.expanduser('~/liljr_state.json')
 BACKUP_DIR = os.path.expanduser('~/liljr_backups')
