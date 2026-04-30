@@ -107,20 +107,28 @@ class QuickFire:
         if "error" in result:
             return f"❌ {action_text}\n   Problem: {result['error']}"
         
-        if self.personality:
-            vibes = [
-                "Done. No questions asked.",
-                "Handled it. What's next?",
-                "Boom. Built.",
-                "Fast. Like you asked.",
-                "There. It lives.",
-                "Done before you blinked.",
-            ]
-            import random
-            vibe = random.choice(vibes)
-            return f"✅ {action_text}\n   {vibe}"
-        else:
-            return f"✅ {action_text}"
+        # Use persona engine for voice
+        try:
+            from persona_engine import get_engine
+            pe = get_engine()
+            msg = pe.speak(action_text, success=True)
+            return msg
+        except:
+            # Fallback
+            if self.personality:
+                vibes = [
+                    "Done. No questions asked.",
+                    "Handled it. What's next?",
+                    "Boom. Built.",
+                    "Fast. Like you asked.",
+                    "There. It lives.",
+                    "Done before you blinked.",
+                ]
+                import random
+                vibe = random.choice(vibes)
+                return f"✅ {action_text}\n   {vibe}"
+            else:
+                return f"✅ {action_text}"
     
     def chat(self, text):
         """Natural language — fast path."""

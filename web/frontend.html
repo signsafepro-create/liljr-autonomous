@@ -265,7 +265,17 @@
 <body>
     <div class="header">
         <h1>⚡ LilJR Command</h1>
-        <div class="status-dot" id="statusDot"></div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <select id="personaSelect" onchange="switchPersona()" style="background:#1a1a2e;color:#fff;border:1px solid #333;border-radius:12px;padding:6px 12px;font-size:12px">
+                <option value="user">🔥 Boss (You)</option>
+                <option value="user_clean">✅ Boss (Clean)</option>
+                <option value="masculine">💪 Him</option>
+                <option value="feminine">💅 Her</option>
+                <option value="professional">📊 Pro</option>
+                <option value="andre">✍️ Andre</option>
+            </select>
+            <div class="status-dot" id="statusDot"></div>
+        </div>
     </div>
     
     <div class="quick-actions">
@@ -309,6 +319,22 @@
         const API_BASE = 'http://localhost:8000';
         let isListening = false;
         let recognition = null;
+        
+        // Persona switching
+        async function switchPersona() {
+            const name = document.getElementById('personaSelect').value;
+            try {
+                const res = await fetch(`${API_BASE}/api/persona/switch`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: name})
+                });
+                const data = await res.json();
+                addMessage('bot', `🎭 Switched to: <b>${data.switched || name}</b>`, 'success');
+            } catch (e) {
+                console.log('Persona switch failed:', e);
+            }
+        }
         
         // Check server status
         async function checkStatus() {
@@ -414,6 +440,7 @@
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
+            const persona = document.getElementById('personaSelect').value;
             if (!text) return;
             
             input.value = '';
@@ -424,7 +451,7 @@
                 const res = await fetch(`${API_BASE}/api/natural`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({text: text})
+                    body: JSON.stringify({text: text, persona: persona})
                 });
                 
                 const data = await res.json();

@@ -1362,6 +1362,65 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._json_response({"error": str(e), "note": "natural_language.py may not be available"})
         
+        # ═══ PERSONA ENGINE ═══
+        elif path == '/api/persona/switch':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                self._json_response(pe.switch(data.get('name', 'user')))
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/persona/list':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                self._json_response(pe.list_personas())
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/persona/train':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                self._json_response(pe.train(data.get('text', ''), data.get('category', 'general')))
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/persona/speak':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                msg = pe.speak(data.get('action', 'Done'), data.get('success', True))
+                self._json_response({"message": msg, "persona": pe.active.get('name')})
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/persona/stats':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                self._json_response(pe.get_training_stats())
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
+        elif path == '/api/persona/create':
+            try:
+                from persona_engine import get_engine
+                pe = get_engine()
+                result = pe.create_persona(
+                    data.get('name', 'Custom'),
+                    data.get('description', ''),
+                    data.get('style', 'neutral'),
+                    data.get('profanity', 0),
+                    data.get('energy', 5),
+                    data.get('formality', 5),
+                    data.get('gender', 'neutral')
+                )
+                self._json_response(result)
+            except Exception as e:
+                self._json_response({"error": str(e)})
+        
         else:
             self._json_response({"error": "Unknown endpoint"}, 404)
 
