@@ -20,6 +20,7 @@ try:
     from deep_search import DeepSearch
     from self_awareness_v2 import SelfAwareness
     from autonomous_loop import AutonomousLoop
+    from web_builder_v2 import WebBuilderV2
     AUTONOMOUS_AVAILABLE = True
 except Exception as e:
     AUTONOMOUS_AVAILABLE = False
@@ -387,6 +388,7 @@ class EmpireEngine:
             self.marketing = MarketingEngine()
             self.search = DeepSearch()
             self.awareness = SelfAwareness('~/liljr-autonomous')
+            self.web_builder = WebBuilderV2('~/liljr-autonomous/web')
             self.autonomous = None  # Started on demand
             self.db.log('INFO', f'Empire Engine v8.0 started with autonomous modules', 'core')
         else:
@@ -394,6 +396,7 @@ class EmpireEngine:
             self.marketing = None
             self.search = None
             self.awareness = None
+            self.web_builder = None
             self.autonomous = None
             self.db.log('INFO', f'Empire Engine v8.0 started (no autonomous modules)', 'core')
     
@@ -1125,6 +1128,79 @@ class Handler(BaseHTTPRequestHandler):
                 self._json_response({"status": "stopped"})
             else:
                 self._json_response({"status": "not_running"})
+        
+        # ═══ WEB BUILDER v2 ═══
+        elif path == '/api/web/build':
+            if engine.web_builder:
+                sections = data.get('sections', [
+                    {"type": "hero", "title": data.get('name', 'Site'), "text": data.get('tagline', ''), "cta": "Get Started"},
+                    {"type": "features", "title": "Features", "items": [{"title": "Feature 1", "desc": "Description"}]},
+                    {"type": "cta", "title": "Ready?", "text": "Join now.", "cta": "Start"}
+                ])
+                result = engine.web_builder.generate_business_site(
+                    data.get('name', 'Site'),
+                    data.get('tagline', 'Built by LilJR'),
+                    sections,
+                    data.get('theme', 'dark_empire'),
+                    data.get('pages', ['index'])
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/app':
+            if engine.web_builder:
+                features = data.get('features', [
+                    {"title": "Counter", "type": "counter", "id": "c1"},
+                    {"title": "Form", "type": "form", "fields": ["Name", "Email"]}
+                ])
+                result = engine.web_builder.generate_web_app(
+                    data.get('name', 'App'),
+                    features,
+                    data.get('theme', 'dark_empire')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/restyle':
+            if engine.web_builder:
+                result = engine.web_builder.restyle(
+                    data.get('page', 'index'),
+                    data.get('theme', 'cyberpunk')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/modify':
+            if engine.web_builder:
+                result = engine.web_builder.modify_page(
+                    data.get('page', 'index'),
+                    data.get('instruction', 'add pricing section')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/list':
+            if engine.web_builder:
+                self._json_response({"sites": engine.web_builder.list_sites()})
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/deploy':
+            if engine.web_builder:
+                result = engine.web_builder.deploy_to_github(
+                    data.get('repo', 'user/repo'),
+                    data.get('branch', 'main')
+                )
+                self._json_response(result)
+            else:
+                self._json_response({"error": "Web builder not available"})
+        
+        elif path == '/api/web/themes':
+            self._json_response({"themes": list(WebBuilderV2.THEMES.keys())})
         
         else:
             self._json_response({"error": "Unknown endpoint"}, 404)

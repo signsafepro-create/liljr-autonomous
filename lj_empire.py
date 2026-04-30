@@ -271,6 +271,38 @@ def main():
         print("♾️ Starting immortal watchdog (auto-restart if killed)...")
         os.system("nohup bash ~/liljr-autonomous/immortal_watchdog.sh > /dev/null 2>&1 &")
         print("Watchdog running in background. Server will auto-resurrect.")
+    
+    # ═══ WEB BUILDER v2 ═══
+    elif cmd == 'web-build':
+        name = sys.argv[2] if len(sys.argv) > 2 else 'MySite'
+        tagline = sys.argv[3] if len(sys.argv) > 3 else 'Built by LilJR'
+        theme = sys.argv[4] if len(sys.argv) > 4 else 'dark_empire'
+        print(json.dumps(api_post('/api/web/build', {"name": name, "tagline": tagline, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-app':
+        name = sys.argv[2] if len(sys.argv) > 2 else 'MyApp'
+        theme = sys.argv[3] if len(sys.argv) > 3 else 'dark_empire'
+        print(json.dumps(api_post('/api/web/app', {"name": name, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-restyle':
+        page = sys.argv[2] if len(sys.argv) > 2 else 'index'
+        theme = sys.argv[3] if len(sys.argv) > 3 else 'cyberpunk'
+        print(json.dumps(api_post('/api/web/restyle', {"page": page, "theme": theme}), indent=2))
+    
+    elif cmd == 'web-modify':
+        page = sys.argv[2] if len(sys.argv) > 2 else 'index'
+        instruction = ' '.join(sys.argv[3:]) if len(sys.argv) > 3 else 'add pricing section'
+        print(json.dumps(api_post('/api/web/modify', {"page": page, "instruction": instruction}), indent=2))
+    
+    elif cmd == 'web-list':
+        print(json.dumps(api_get('/api/web/list'), indent=2))
+    
+    elif cmd == 'web-themes':
+        print(json.dumps(api_get('/api/web/themes'), indent=2))
+    
+    elif cmd == 'web-deploy':
+        repo = sys.argv[2] if len(sys.argv) > 2 else 'user/repo'
+        print(json.dumps(api_post('/api/web/deploy', {"repo": repo}), indent=2))
 
     # ═══ HELP ═══
     elif cmd in ('help', ''):
@@ -359,11 +391,15 @@ DEEP SEARCH:
   python3 ~/lj_empire.py deep-search "AI trends" — Web intelligence
   python3 ~/lj_empire.py competitors "niche" — Find competitors
 
-AUTONOMOUS LOOP:
-  python3 ~/lj_empire.py autonomous-start — Start non-stop thinking
-  python3 ~/lj_empire.py autonomous-status — Check progress
-  python3 ~/lj_empire.py autonomous-stop — Stop loop
-""")
+WEB BUILDER v2:
+  python3 ~/lj_empire.py web-build "Site" "Tagline" dark_empire  — Build business site
+  python3 ~/lj_empire.py web-app "AppName" dark_empire         — Build interactive web app
+  python3 ~/lj_empire.py web-restyle index cyberpunk          — Change theme
+  python3 ~/lj_empire.py web-modify index "add pricing"       — Modify page
+  python3 ~/lj_empire.py web-list                              — List all sites
+  python3 ~/lj_empire.py web-themes                          — Show themes
+  python3 ~/lj_empire.py web-deploy user/repo                 — Deploy to GitHub Pages
+
 
 if __name__ == '__main__':
     main()
