@@ -137,7 +137,7 @@ with open('$HOME/liljr_state.json', 'w') as f:
     ;;
   # ─── SHORTCUTS ───
   buy)
-    python3 ~/liljr-autonomous/command_center.py "buy $1 ${2:-1}"
+    curl -s -X POST "$BASE/api/trading/buy" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo ""
     ;;
   sell)
     curl -s -X POST "$BASE/api/trading/sell" -H "Content-Type: application/json" -d "{\"symbol\":\"$1\",\"qty\":${2:-1}}" && echo ""
