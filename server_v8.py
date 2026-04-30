@@ -396,10 +396,6 @@ class EmpireEngine:
             self.awareness = None
             self.autonomous = None
             self.db.log('INFO', f'Empire Engine v8.0 started (no autonomous modules)', 'core')
-        self._healer_thread.start()
-        self._backup_thread = threading.Thread(target=self._auto_backup, daemon=True)
-        self._backup_thread.start()
-        self.db.log('INFO', f'Empire Engine v8.0 started', 'core')
     
     # ─── PERSISTENCE ───
     def _auto_save(self):
