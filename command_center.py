@@ -7,6 +7,8 @@ Talk to it. It writes code, pushes, deploys, heals itself.
 import os, sys, json, subprocess, time, re, urllib.request
 from datetime import datetime
 
+from memory_engine import MemoryEngine
+
 STATE_FILE = os.path.expanduser('~/liljr_state.json')
 REPO_DIR = os.path.expanduser('~/liljr-autonomous')
 LOG_FILE = os.path.expanduser('~/liljr_command_center.log')
@@ -269,6 +271,7 @@ class Executor:
         self.awareness = SelfAwareness()
         self.parser = CommandParser()
         self.writer = CodeWriter()
+        self.memory = MemoryEngine()
         self.base_url = "http://localhost:8000"
     
     def log(self, msg):
@@ -347,7 +350,17 @@ class Executor:
         }
         
         handler = handlers.get(cmd, self._handle_unknown)
-        return handler(args)
+        result = handler(args)
+        
+        # Log to memory engine
+        self.memory.log_interaction(
+            text=text_or_cmd if args else '',
+            cmd_type=cmd,
+            result=result,
+            context={'args': args}
+        )
+        
+        return result
     
     def _handle_buy(self, args):
         symbol = args[1].upper() if len(args) > 1 else 'AAPL'

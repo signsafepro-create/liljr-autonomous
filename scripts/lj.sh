@@ -189,7 +189,26 @@ with open('$HOME/liljr_state.json', 'w') as f:
     ;;
   # ─── MEMORY ENGINE ───
   memory)
-    python3 ~/liljr-autonomous/memory_engine.py "${1:-query}" "${2:-$*}"
+    ACTION="${1:-stats}"
+    # Map natural language to engine actions
+    case "$ACTION" in
+      patterns|analyze|analysis|insight)
+        shift; python3 ~/liljr-autonomous/memory_engine.py analyze "$@"
+        ;;
+      suggestions|suggest|tips)
+        shift; python3 ~/liljr-autonomous/memory_engine.py suggest "$@"
+        ;;
+      query|what|remember|recall|find)
+        shift; python3 ~/liljr-autonomous/memory_engine.py query "$@"
+        ;;
+      stats|status|info|data)
+        shift; python3 ~/liljr-autonomous/memory_engine.py stats "$@"
+        ;;
+      *)
+        # If first arg isn't a known action, treat whole thing as a query
+        python3 ~/liljr-autonomous/memory_engine.py query "$ACTION $*"
+        ;;
+    esac
     ;;
   # ─── AGENT TASK ───
   agent)
