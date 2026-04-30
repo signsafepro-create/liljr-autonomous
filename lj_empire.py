@@ -33,33 +33,27 @@ def main():
     
     # ═══ SERVER ═══
     if cmd == 'start':
-        print("🚀 Starting LilJR Empire v8.0...")
-        # Kill ALL old servers aggressively
-        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null; pkill -f 'server.py' 2>/dev/null")
-        import time; time.sleep(2)
-        # Start fresh
-        os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
-        time.sleep(3)
+        print("🚀 Starting LilJR Empire v8.0 (bulletproof)...")
+        os.system("bash ~/liljr-autonomous/bulletproof_start.sh")
+        import time; time.sleep(4)
         health = api_get('/api/health')
         if 'version' not in health:
-            print("⚠️ Server not responding. Retrying...")
-            os.system("pkill -f 'python.*8000' 2>/dev/null")
-            time.sleep(1)
-            os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
+            print("⚠️ Still waking up...")
             time.sleep(3)
             health = api_get('/api/health')
         print(json.dumps(health, indent=2))
     
     elif cmd == 'stop':
-        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null")
+        os.system("pkill -9 -f 'python.*8000' 2>/dev/null; pkill -9 -f 'server_v' 2>/dev/null; pkill -9 -f 'liljr_os' 2>/dev/null")
+        os.system("termux-wake-unlock 2>/dev/null")
         print("Stopped all servers.")
     
     elif cmd == 'restart':
         print("🔄 Restarting...")
-        os.system("pkill -f 'python.*8000' 2>/dev/null; pkill -f 'server_v' 2>/dev/null; pkill -f 'liljr_os.py' 2>/dev/null")
+        os.system("pkill -9 -f 'python.*8000' 2>/dev/null; pkill -9 -f 'server_v' 2>/dev/null; pkill -9 -f 'liljr_os' 2>/dev/null")
         import time; time.sleep(2)
-        os.system("nohup python3 ~/liljr-autonomous/server_v8.py > /dev/null 2>&1 &")
-        time.sleep(3)
+        os.system("bash ~/liljr-autonomous/bulletproof_start.sh")
+        time.sleep(4)
         print(json.dumps(api_get('/api/health'), indent=2))
     
     elif cmd == 'status':
@@ -273,6 +267,11 @@ def main():
     elif cmd == 'autonomous-stop':
         print(json.dumps(api_post('/api/autonomous/stop'), indent=2))
     
+    elif cmd == 'immortal':
+        print("♾️ Starting immortal watchdog (auto-restart if killed)...")
+        os.system("nohup bash ~/liljr-autonomous/immortal_watchdog.sh > /dev/null 2>&1 &")
+        print("Watchdog running in background. Server will auto-resurrect.")
+
     # ═══ HELP ═══
     elif cmd in ('help', ''):
         print_help()
@@ -339,6 +338,7 @@ SYSTEM:
   python3 ~/lj_empire.py logs         — View system logs
   python3 ~/lj_empire.py flush-logs   — Clear logs
   python3 ~/lj_empire.py cache        — Cache stats
+  python3 ~/lj_empire.py immortal     — Start unkillable watchdog
 
 SELF-AWARENESS:
   python3 ~/lj_empire.py self-scan    — Scan codebase
