@@ -412,6 +412,149 @@ class LilJREngine:
             "time": str(datetime.now())
         }
     
+    # ─── PLATFORM CONNECTORS ───
+    def connect_platform(self, platform, credentials):
+        """Connect to a social/platform API."""
+        if 'platforms' not in STATE:
+            STATE['platforms'] = {}
+        
+        STATE['platforms'][platform] = {
+            'credentials': credentials,
+            'connected': str(datetime.now()),
+            'status': 'active'
+        }
+        save_state()
+        return {"status": "connected", "platform": platform}
+    
+    def platform_post(self, platform, content, extra=None):
+        """Post content to any connected platform."""
+        if 'platforms' not in STATE or platform not in STATE['platforms']:
+            return {"status": "error", "reason": f"Platform '{platform}' not connected. Run: connect {platform}"}
+        
+        creds = STATE['platforms'][platform]['credentials']
+        
+        if platform == 'github':
+            return self._github_push(creds, content, extra)
+        elif platform == 'facebook':
+            return self._facebook_post(creds, content)
+        elif platform == 'twitter':
+            return self._twitter_post(creds, content)
+        elif platform == 'telegram':
+            return self._telegram_send(creds, content, extra)
+        elif platform == 'webhook':
+            return self._webhook_send(creds, content, extra)
+        else:
+            return {"status": "error", "reason": f"Unknown platform: {platform}"}
+    
+    def _github_push(self, creds, content, extra):
+        """Push to GitHub repo."""
+        try:
+            token = creds.get('token')
+            repo = creds.get('repo', extra.get('repo') if extra else None)
+            path = extra.get('path', 'file.txt') if extra else 'file.txt'
+            message = extra.get('message', 'Update') if extra else 'Update'
+            
+            if not token or not repo:
+                return {"status": "error", "reason": "Need token and repo"}
+            
+            import base64
+            b64 = base64.b64encode(content.encode()).decode()
+            url = f"https://api.github.com/repos/{repo}/contents/{path}"
+            
+            req = urllib.request.Request(url, data=json.dumps({"message": message, "content": b64}).encode(), headers={
+                'Authorization': f'token {token}',
+                'Content-Type': 'application/json',
+                'User-Agent': 'LilJR/1.0'
+            }, method='PUT')
+            
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return {"status": "pushed", "platform": "github", "repo": repo, "path": path}
+        except Exception as e:
+            return {"status": "error", "platform": "github", "error": str(e)}
+    
+    def _facebook_post(self, creds, content):
+        """Post to Facebook page."""
+        try:
+            token = creds.get('token')
+            page_id = creds.get('page_id')
+            
+            if not token or not page_id:
+                return {"status": "error", "reason": "Need token and page_id"}
+            
+            url = f"https://graph.facebook.com/v18.0/{page_id}/feed"
+            data = urllib.parse.urlencode({"message": content, "access_token": token}).encode()
+            
+            req = urllib.request.Request(url, data=data, headers={'User-Agent': 'LilJR/1.0'})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return {"status": "posted", "platform": "facebook", "response": json.loads(resp.read())}
+        except Exception as e:
+            return {"status": "error", "platform": "facebook", "error": str(e)}
+    
+    def _twitter_post(self, creds, content):
+        """Post tweet."""
+        try:
+            bearer = creds.get('bearer')
+            if not bearer:
+                return {"status": "error", "reason": "Need bearer token"}
+            
+            url = "https://api.twitter.com/2/tweets"
+            req = urllib.request.Request(url, data=json.dumps({"text": content}).encode(), headers={
+                'Authorization': f'Bearer {bearer}',
+                'Content-Type': 'application/json'
+            }, method='POST')
+            
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return {"status": "tweeted", "platform": "twitter", "response": json.loads(resp.read())}
+        except Exception as e:
+            return {"status": "error", "platform": "twitter", "error": str(e)}
+    
+    def _telegram_send(self, creds, content, chat_id):
+        """Send Telegram message."""
+        try:
+            token = creds.get('token')
+            chat = chat_id or creds.get('chat_id')
+            
+            if not token or not chat:
+                return {"status": "error", "reason": "Need token and chat_id"}
+            
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            data = json.dumps({"chat_id": chat, "text": content, "parse_mode": "Markdown"}).encode()
+            
+            req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return {"status": "sent", "platform": "telegram", "response": json.loads(resp.read())}
+        except Exception as e:
+            return {"status": "error", "platform": "telegram", "error": str(e)}
+    
+    def _webhook_send(self, creds, content, extra):
+        """Send webhook to any URL."""
+        try:
+            url = creds.get('url')
+            method = extra.get('method', 'POST') if extra else 'POST'
+            headers = extra.get('headers', {}) if extra else {}
+            
+            if not url:
+                return {"status": "error", "reason": "Need webhook URL"}
+            
+            payload = json.dumps({"content": content, "timestamp": str(datetime.now())}).encode()
+            req = urllib.request.Request(url, data=payload, headers={**headers, 'Content-Type': 'application/json'}, method=method)
+            
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return {"status": "delivered", "platform": "webhook", "code": resp.status}
+        except Exception as e:
+            return {"status": "error", "platform": "webhook", "error": str(e)}
+    
+    def cross_post(self, content, platforms):
+        """Post to multiple platforms at once."""
+        results = {}
+        for p in platforms:
+            results[p] = self.platform_post(p, content)
+        return {"status": "cross_posted", "platforms": platforms, "results": results}
+    
+    def list_platforms(self):
+        """List connected platforms."""
+        return list(STATE.get('platforms', {}).keys())
+    
     # ─── UNIVERSAL CONNECTOR — Hook to any server ───
     def register_connection(self, name, base_url, headers=None, auth_type=None, auth_token=None):
         """Register a new server connection."""
@@ -633,6 +776,18 @@ class Handler(BaseHTTPRequestHandler):
         
         elif path == '/api/connect/remove':
             self._json_response(engine.remove_connection(data.get('name')))
+        
+        elif path == '/api/platform/connect':
+            self._json_response(engine.connect_platform(data.get('platform'), data.get('credentials')))
+        
+        elif path == '/api/platform/post':
+            self._json_response(engine.platform_post(data.get('platform'), data.get('content'), data.get('extra')))
+        
+        elif path == '/api/platform/cross-post':
+            self._json_response(engine.cross_post(data.get('content'), data.get('platforms', [])))
+        
+        elif path == '/api/platform/list':
+            self._json_response({"platforms": engine.list_platforms()})
         
         else:
             self._json_response({"status": "not_found"}, 404)

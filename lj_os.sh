@@ -147,6 +147,36 @@ case "$1" in
     curl -s "$BASE/api/connect/discover/$ENCODED" && echo ""
     ;;
   
+  # ═══ PLATFORM BRIDGE — Post to any platform ═══
+  platform-connect)
+    # Connect a platform
+    # Usage: platform-connect PLATFORM '{"token":"xxx","page_id":"yyy"}'
+    PLATFORM="$2"
+    CREDENTIALS="$3"
+    curl -s -X POST "$BASE/api/platform/connect" -H "Content-Type: application/json" -d "{\"platform\":\"$PLATFORM\",\"credentials\":$CREDENTIALS}" && echo ""
+    ;;
+  post)
+    # Post to a platform
+    # Usage: post PLATFORM "Message text" '{"extra":"data"}'
+    PLATFORM="$2"
+    CONTENT="$3"
+    EXTRA="${4:-{}}"
+    curl -s -X POST "$BASE/api/platform/post" -H "Content-Type: application/json" -d "{\"platform\":\"$PLATFORM\",\"content\":\"$CONTENT\",\"extra\":$EXTRA}" && echo ""
+    ;;
+  cross-post)
+    # Post to multiple platforms
+    # Usage: cross-post "Hello world" facebook,twitter,telegram
+    CONTENT="$2"
+    PLATFORMS="$3"
+    # Convert comma-separated to JSON array
+    IFS=',' read -ra ARR <<< "$PLATFORMS"
+    JSON_PLATFORMS="[$(printf '\"%s",' "${ARR[@]}" | sed 's/,$//')]"
+    curl -s -X POST "$BASE/api/platform/cross-post" -H "Content-Type: application/json" -d "{\"content\":\"$CONTENT\",\"platforms\":$JSON_PLATFORMS}" && echo ""
+    ;;
+  platforms)
+    curl -s "$BASE/api/platform/list" && echo ""
+    ;;
+  
   # ═══ PERSISTENCE ═══
   save)
     echo "State auto-saves every 5 min. Forcing now..."
@@ -197,6 +227,18 @@ case "$1" in
     echo "  bash ~/lj_os plugin myplugin file.py — Create from file"
     echo "  bash ~/lj_os run-plugin myplugin    — Execute"
     echo "  bash ~/lj_os plugins                — List"
+    echo ""
+    echo "PLATFORM BRIDGE — POST ANYWHERE:"
+    echo "  bash ~/lj_os platform-connect github '{\"token\":\"ghp_xxx\"}'"
+    echo "  bash ~/lj_os post github 'Hello world' '{\"repo\":\"user/repo\",\"path\":\"README.md\"}'"
+    echo "  bash ~/lj_os platform-connect facebook '{\"token\":\"xxx\",\"page_id\":\"yyy\"}'"
+    echo "  bash ~/lj_os post facebook 'Check this out!'"
+    echo "  bash ~/lj_os platform-connect telegram '{\"token\":\"xxx\",\"chat_id\":\"yyy\"}'"
+    echo "  bash ~/lj_os post telegram 'Alert!' '{\"chat_id\":\"yyy\"}'"
+    echo "  bash ~/lj_os platform-connect webhook '{\"url\":\"https://hooks.example.com\"}'"
+    echo "  bash ~/lj_os post webhook 'Event data' '{\"method\":\"POST\"}'"
+    echo "  bash ~/lj_os cross-post 'Hello world' facebook,twitter,telegram"
+    echo "  bash ~/lj_os platforms              — List connected platforms"
     echo ""
     echo "CONNECTOR — HOOK ANY SERVER:"
     echo "  bash ~/lj_os connect alpaca https://paper-api.alpaca.markets bearer YOUR_KEY"
