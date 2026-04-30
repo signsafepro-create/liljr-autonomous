@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LilJR — Voice Command Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.bot {
+            align-self: flex-start;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message.bot.error {
+            background: #2a0a0a;
+            border-color: #ff006e;
+            color: #ff8888;
+        }
+        
+        .message.bot.success {
+            background: #0a2a0a;
+            border-color: #00ff88;
+            color: #88ffaa;
+        }
+        
+        .timestamp {
+            font-size: 11px;
+            opacity: 0.5;
+            margin-top: 4px;
+        }
+        
+        /* Input Area */
+        .input-area {
+            padding: 12px 16px 24px;
+            background: #111;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            background: #1a1a2e;
+            border-radius: 24px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            border: 1px solid #333;
+        }
+        
+        .input-wrapper:focus-within {
+            border-color: #ff006e;
+        }
+        
+        #chatInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 10px 14px;
+            font-size: 15px;
+            outline: none;
+        }
+        
+        #chatInput::placeholder {
+            color: #666;
+        }
+        
+        .mic-btn, .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mic-btn {
+            background: #1a1a2e;
+            color: #ff006e;
+            border: 1px solid #333;
+        }
+        
+        .mic-btn:hover, .mic-btn:active {
+            background: #ff006e;
+            color: white;
+        }
+        
+        .mic-btn.listening {
+            background: #ff006e;
+            color: white;
+            animation: mic-pulse 1s infinite;
+        }
+        
+        @keyframes mic-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            color: white;
+        }
+        
+        .send-btn:hover, .send-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        
+        .quick-actions::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #ccc;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chip:hover, .chip:active {
+            background: linear-gradient(135deg, #ff006e, #8338ec);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* Loading */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+        
+        .typing-indicator .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff006e;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-indicator .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        /* Scrollbar */
+        .chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ LilJR Command</h1>
+        <div class="status-dot" id="statusDot"></div>
+    </div>
+    
+    <div class="quick-actions">
+        <div class="chip" onclick="sendQuick('build me a landing page')">🏗️ Build Site</div>
+        <div class="chip" onclick="sendQuick('fix my code')">🔧 Fix Code</div>
+        <div class="chip" onclick="sendQuick('search AI trends')">🔍 Search</div>
+        <div class="chip" onclick="sendQuick('write marketing copy')">✍️ Market</div>
+        <div class="chip" onclick="sendQuick('buy 5 AAPL')">📈 Trade</div>
+    </div>
+    
+    <div class="chat-container" id="chatContainer">
+        <div class="message bot">
+            Hey. I'm LilJR. Talk to me — build, fix, search, trade. I do what you ask.<br><br>
+            <span style="opacity:0.7">Try: "build me a dark website" or tap the mic 🎤</span>
+            <div class="timestamp">Just now</div>
+        </div>
+    </div>
+    
+    <div class="input-area">
+        <div class="input-wrapper">
+            <input type="text" id="chatInput" placeholder="Tell LilJR what to build..." 
+                   onkeypress="if(event.key==='Enter')sendMessage()">
+            <button class="mic-btn" id="micBtn" onclick="toggleVoice()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </button>
+        </div>
+        <button class="send-btn" onclick="sendMessage()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        </button>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let isListening = false;
+        let recognition = null;
+        
+        // Check server status
+        async function checkStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/api/health`);
+                const data = await res.json();
+                const dot = document.getElementById('statusDot');
+                if (data.version && data.version.includes('liljr-empire')) {
+                    dot.style.background = '#00ff88';
+                    dot.style.boxShadow = '0 0 10px #00ff88';
+                } else {
+                    dot.style.background = '#ffaa00';
+                    dot.style.boxShadow = '0 0 10px #ffaa00';
+                }
+            } catch (e) {
+                const dot = document.getElementById('statusDot');
+                dot.style.background = '#ff006e';
+                dot.style.boxShadow = '0 0 10px #ff006e';
+            }
+        }
+        
+        setInterval(checkStatus, 5000);
+        checkStatus();
+        
+        // Voice recognition
+        function setupVoice() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('micBtn').classList.add('listening');
+                };
+                
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('micBtn').classList.remove('listening');
+                };
+                
+                recognition.onresult = (event) => {
+                    const text = event.results[0][0].transcript;
+                    document.getElementById('chatInput').value = text;
+                    sendMessage();
+                };
+                
+                recognition.onerror = (event) => {
+                    console.log('Voice error:', event.error);
+                    isListening = false;
+                    document.getElementById('micBtn').classList.remove('listening');
+                };
+            }
+        }
+        
+        setupVoice();
+        
+        function toggleVoice() {
+            if (!recognition) {
+                addMessage('bot', 'Voice not supported on this device. Type instead.', 'error');
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+        
+        // Chat functions
+        function addMessage(type, text, extraClass = '') {
+            const container = document.getElementById('chatContainer');
+            const msg = document.createElement('div');
+            msg.className = `message ${type} ${extraClass}`;
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            msg.innerHTML = text + `<div class="timestamp">${time}</div>`;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function addTyping() {
+            const container = document.getElementById('chatContainer');
+            const typing = document.createElement('div');
+            typing.id = 'typingIndicator';
+            typing.className = 'message bot';
+            typing.innerHTML = '<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+            container.appendChild(typing);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function removeTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+        
+        function sendQuick(text) {
+            document.getElementById('chatInput').value = text;
+            sendMessage();
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            input.value = '';
+            addMessage('user', text);
+            addTyping();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/natural`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: text})
+                });
+                
+                const data = await res.json();
+                removeTyping();
+                
+                if (data.error) {
+                    addMessage('bot', `Error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                // Format the response
+                let response = '';
+                if (data.intent) {
+                    response += `<b>${data.intent}</b><br><br>`;
+                }
+                
+                if (data.output) {
+                    const out = data.output;
+                    if (out.html) {
+                        response += `✅ Built: <code>${out.saved?.path || 'web/file.html'}</code><br>Size: ${out.saved?.size || '?'} bytes`;
+                    } else if (out.copies) {
+                        response += out.copies.map((c, i) => `${i+1}. ${c}`).join('<br>');
+                    } else if (out.health) {
+                        response += `Health: ${out.health.score}% | Fixed ${out.executed?.length || 0} issues`;
+                    } else if (out.cash !== undefined) {
+                        response += `Cash: $${out.cash.toFixed(2)} | Positions: ${out.positions?.length || 0}`;
+                    } else if (out.status) {
+                        response += `Status: ${out.status}`;
+                    } else {
+                        response += JSON.stringify(out, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+                    }
+                } else {
+                    response += JSON.stringify(data, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+                }
+                
+                addMessage('bot', response, 'success');
+                
+            } catch (e) {
+                removeTyping();
+                addMessage('bot', `Connection error: ${e.message}<br><br>Is the server running? Try: <code>bash ~/liljr-autonomous/bulletproof_start.sh</code>`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

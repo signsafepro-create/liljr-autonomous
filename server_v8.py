@@ -869,7 +869,40 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path
         
-        if path == '/api/health':
+        # ═══ STATIC FILES ═══
+        if path == '/':
+            try:
+                web_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web')
+                with open(os.path.join(web_dir, 'frontend.html'), 'r') as f:
+                    html = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(html.encode())
+                return
+            except:
+                self._json_response({"message": "LilJR Empire v8.0", "open": "http://localhost:8000/web/frontend.html"})
+        
+        elif path.startswith('/web/'):
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path.lstrip('/'))
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                self.send_response(200)
+                if file_path.endswith('.html'):
+                    self.send_header('Content-Type', 'text/html')
+                elif file_path.endswith('.css'):
+                    self.send_header('Content-Type', 'text/css')
+                elif file_path.endswith('.js'):
+                    self.send_header('Content-Type', 'application/javascript')
+                self.end_headers()
+                self.wfile.write(content.encode())
+                return
+            else:
+                self._json_response({"error": "File not found"}, 404)
+        
+        # ═══ CORE API ═══
+        elif path == '/api/health':
             self._json_response(engine.health())
         
         elif path == '/api/empire':
