@@ -12,6 +12,18 @@ app = Flask(__name__)
 CORS(app)
 PORT = int(os.environ.get('PORT', 8000))
 
+# Memory Engine (repo root)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+try:
+    from memory_engine import MemoryEngine
+    memory_engine = MemoryEngine()
+except Exception as e:
+    print(f"[WARN] Memory Engine not loaded: {e}")
+    memory_engine = None
+
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
@@ -421,6 +433,14 @@ def buy_stock():
     TRADE_HISTORY.append({"time": str(datetime.now()), "action": "buy", "symbol": sym, "qty": qty})
     PORTFOLIO['cash'] -= qty * 175
     save_state()
+    
+    # Log to Memory Engine
+    if memory_engine:
+        try:
+            memory_engine.log_trade(sym, 'buy', qty, 175, {'status': 'FILLED', 'broker': 'mock'}, 'Manual buy via API')
+        except Exception as e:
+            print(f"[MEM ERROR] {e}")
+    
     send_telegram(f"📈 *BOUGHT* {qty} shares of {sym.upper()}")
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "mock"})
 
@@ -455,6 +475,14 @@ def sell_stock():
     TRADE_HISTORY.append({"time": str(datetime.now()), "action": "sell", "symbol": sym, "qty": qty})
     PORTFOLIO['cash'] += qty * 175
     save_state()
+    
+    # Log to Memory Engine
+    if memory_engine:
+        try:
+            memory_engine.log_trade(sym, 'sell', qty, 175, {'status': 'FILLED', 'broker': 'mock'}, 'Manual sell via API')
+        except Exception as e:
+            print(f"[MEM ERROR] {e}")
+    
     send_telegram(f"📉 *SOLD* {qty} shares of {sym.upper()}")
     return jsonify({"status": "FILLED", "symbol": sym.upper(), "qty": qty, "total": qty * 175, "broker": "mock"})
 
