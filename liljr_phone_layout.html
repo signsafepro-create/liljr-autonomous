@@ -6,14 +6,20 @@
 <meta name="theme-color" content="#0a0a0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
 <title>LilJR</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding:16px;padding-bottom:120px;-webkit-font-smoothing:antialiased}
-.status-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px}
+.status-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:8px}
 .brand{font-size:22px;font-weight:800;background:linear-gradient(90deg,#00d4ff,#ff00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
 .pulse-dot{width:10px;height:10px;border-radius:50%;background:#00ff88;box-shadow:0 0 12px #00ff88;animation:pulse 2s infinite}
+.pulse-dot.offline{background:#ff4444;box-shadow:0 0 12px #ff4444}
 @keyframes pulse{0%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}100%{opacity:1;transform:scale(1)}}
+.conn-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.conn-badge{font-size:11px;padding:4px 10px;border-radius:12px;background:#1a3a1a;color:#00ff88;font-weight:600}
+.conn-badge.offline{background:#3a1a1a;color:#ff4444}
 .card{background:#141428;border-radius:20px;padding:20px;margin-bottom:16px;border:1px solid #1e1e3a;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .card-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:12px}
 .big-value{font-size:42px;font-weight:800;letter-spacing:-1px;margin-bottom:4px}
@@ -61,16 +67,21 @@ body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
 <div class="brand">LilJR</div>
 <div style="display:flex;align-items:center;gap:8px">
 <span style="font-size:11px;color:#666">LIVE</span>
-<div class="pulse-dot"></div>
+<div class="pulse-dot" id="pulseDot"></div>
 </div>
+</div>
+
+<div class="conn-bar">
+<div class="conn-badge" id="connBadge">Checking...</div>
+<div style="font-size:11px;color:#666" id="lastUpdate">--:--</div>
 </div>
 
 <!-- MAIN DASHBOARD -->
 <div id="dashboard">
 <div class="card">
 <div class="card-title">Cash Position</div>
-<div class="big-value green" id="cash">$999,506</div>
-<div class="sub" id="positions">1 position active</div>
+<div class="big-value green" id="cash">$---</div>
+<div class="sub" id="positions">Checking...</div>
 </div>
 
 <div class="grid">
@@ -125,9 +136,7 @@ body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
 <div class="card">
 <div class="card-title">System Log</div>
 <div class="log" id="log">
-<div class="log-line"><span class="log-time">12:00</span> OMNI activated</div>
-<div class="log-line"><span class="log-time">12:00</span> Server running on port 7777</div>
-<div class="log-line"><span class="log-time">12:00</span> Threat monitor armed</div>
+<div class="log-line"><span class="log-time">--:--</span> Waiting for OMNI...</div>
 </div>
 </div>
 </div>
@@ -139,7 +148,7 @@ body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
 <div class="brand">Money</div>
 </div>
 <div class="card">
-<div class="big-value green" id="money-cash">$999,506</div>
+<div class="big-value green" id="money-cash">$---</div>
 <div class="sub">Available cash</div>
 </div>
 <div class="grid">
@@ -313,63 +322,104 @@ body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
 </div>
 
 <script>
-const API = 'http://localhost:7777/api/omni/command';
-let logCount = 0;
+var API = 'http://localhost:7777/api/omni/command';
+var STATUS_API = 'http://localhost:7777/api/omni/status';
+var omniOnline = false;
+
+function setOnline(online) {
+omniOnline = online;
+var el = document.getElementById('connBadge');
+var dot = document.getElementById('pulseDot');
+var time = document.getElementById('lastUpdate');
+if (online) {
+el.textContent = 'OMNI Online';
+el.classList.remove('offline');
+dot.classList.remove('offline');
+time.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+} else {
+el.textContent = 'OMNI Offline';
+el.classList.add('offline');
+dot.classList.add('offline');
+}
+}
 
 function showPage(page) {
-document.querySelectorAll('#dashboard, #money, #ops, #research, #legal').forEach(el => el.classList.add('hidden'));
+var pages = ['dashboard','money','ops','research','legal'];
+for (var i=0; i<pages.length; i++) {
+document.getElementById(pages[i]).classList.add('hidden');
+}
 document.getElementById(page).classList.remove('hidden');
-document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-// Update active nav
-const navMap = {dashboard:0, money:1, research:3, ops:4};
-if(navMap[page] !== undefined) document.querySelectorAll('.nav-btn')[navMap[page]].classList.add('active');
+var btns = document.querySelectorAll('.nav-btn');
+for (var i=0; i<btns.length; i++) btns[i].classList.remove('active');
+var navMap = {dashboard:0, money:1, research:3, ops:4};
+if(navMap[page] !== undefined) btns[navMap[page]].classList.add('active');
 }
 
 function sendCmd(cmd) {
 addLog('> ' + cmd);
+if (!omniOnline) {
+addLog('Need to start OMNI first. Run: python3 liljr_v90_omni.py');
+return;
+}
 fetch(API, {
 method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({command:cmd})
 })
-.then(r => r.json())
-.then(d => {
+.then(function(r){return r.json();})
+.then(function(d){
+setOnline(true);
 if(d.message) addLog(d.message);
-if(d.cash !== undefined) document.getElementById('cash').textContent = '$' + Math.round(d.cash).toLocaleString();
+if(d.cash !== undefined) updateCash(d.cash);
 })
-.catch(e => addLog('LilJR offline. Start OMNI first.'));
+.catch(function(e){
+setOnline(false);
+addLog('OMNI not responding.');
+});
 }
 
 function sendText() {
-const input = document.getElementById('cmdInput');
-const cmd = input.value.trim();
+var input = document.getElementById('cmdInput');
+var cmd = input.value.trim();
 if(!cmd) return;
 sendCmd(cmd);
 input.value = '';
 }
 
 function addLog(text) {
-const log = document.getElementById('log');
-const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-const line = document.createElement('div');
+var log = document.getElementById('log');
+var time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+var line = document.createElement('div');
 line.className = 'log-line';
-line.innerHTML = `<span class="log-time">${time}</span> ${text}`;
+line.innerHTML = '<span class="log-time">' + time + '</span> ' + text;
 log.insertBefore(line, log.firstChild);
 if(log.children.length > 50) log.removeChild(log.lastChild);
 }
 
-// Auto-refresh status every 5s
-setInterval(() => {
-fetch('http://localhost:7777/api/omni/status', {cache:'no-store'})
-.then(r => r.json())
-.then(d => {
-if(d.cash !== undefined) document.getElementById('cash').textContent = '$' + Math.round(d.cash).toLocaleString();
-})
-.catch(()=>{});
-}, 5000);
+function updateCash(cash) {
+var str = '$' + Math.round(cash).toLocaleString();
+document.getElementById('cash').textContent = str;
+document.getElementById('money-cash').textContent = str;
+}
 
-// Welcome
-addLog('Phone layout loaded. Tap any button.');
+function checkStatus() {
+fetch(STATUS_API, {cache:'no-store'})
+.then(function(r){return r.json();})
+.then(function(d){
+setOnline(true);
+if(d.cash !== undefined) updateCash(d.cash);
+if(d.positions !== undefined) {
+var txt = d.positions + ' position' + (d.positions !== 1 ? 's' : '') + ' active';
+document.getElementById('positions').textContent = txt;
+}
+})
+.catch(function(){setOnline(false);});
+}
+
+// Heartbeat every 3 seconds
+setInterval(checkStatus, 3000);
+checkStatus();
+addLog('App loaded. Tap buttons or type below.');
 </script>
 </body>
 </html>
