@@ -1,9 +1,9 @@
 # LILJR v93.6 — MASTER HANDOFF
 ## Your Phone Is LilJR. Hardwired. Complete System Takeover.
 
-**Date:** 2026-05-02
+**Date:** 2026-05-02 03:20
 **Repo:** `signsafepro-create/liljr-autonomous`
-**Commit:** `12a1e57`
+**Commit:** `369c866`
 
 ---
 
@@ -102,6 +102,52 @@ lj push                               # Push to GitHub
 | `POST /api/omni/command` | POST | Execute any command. Body: `{"command": "buy AAPL 10"}` |
 
 Port: `7777`
+
+## 🏗️ S21 CLEAN STRUCTURE (v94.0-v94.1)
+
+**Location:** `~/liljr-system/`
+
+| Directory | Purpose |
+|---|---|
+| `brain/` | Brain + chat + voice daemons |
+| `deploy/` | Auto-deploy scripts (GitHub push) |
+| `api/` | HTTP server (port 7777 or 8080) |
+| `marketing/` | Lead bot, outreach, conversion |
+| `monitor/` | System takeover, health checks |
+| `secrets/` | API keys, env files |
+| `logs/` | Brain, deploy, marketing, boot logs |
+| `scripts/` | Command wrappers |
+| `sync/` | Backup/sync utilities |
+| `tmp/` | Temporary files |
+| `web/` | Web projects, dashboards |
+
+### Brain Commands (v94.1)
+
+```bash
+liljr-start    # Boot the brain
+liljr-chat     # Chat mode
+liljr-voice    # Voice mode  
+liljr-system   # System takeover
+```
+
+**Inside the brain prompt (`LIL JR >`):**
+
+| Command | Does | Response |
+|---|---|---|
+| `deploy` | Pushes code to GitHub | "Deployed. Code pushed." |
+| `market` | Runs marketing bot | "Marketed. Leads fired." |
+| `health` | System status | `{"status": "awake", "epoch": N, "device": "S21", ...}` |
+| `sleep` | Graceful shutdown, saves state | "Goodnight. State saved. Reboot to resume." |
+| `wake` | Resume from sleep | "I'm back. Epoch N. Ready." |
+| `exit` / `quit` / `shutdown` | Same as sleep | "Goodnight. State saved." |
+| **Anything else** | **The brain learns it** | "[EPOCH-N] Learned: ..." / "Noted. Stored in memory." |
+
+**State file:** `~/liljr-system/brain/.omnibrain.json` — persistent, survives reboot.
+
+### Migration Command
+```bash
+cd ~/liljr-autonomous && git pull origin main && bash liljr_s21_migrate.sh
+```
 
 ## 🛡️ SYSTEM TAKEOVER CAPABILITIES
 
@@ -234,6 +280,9 @@ pkg install python git termux-api -y
 | v93.0 | `991fe58` | Chat mode |
 | v93.5 | `2aa8d00` | System takeover |
 | v93.6 | `12a1e57` | Chat fallback + voice fix guide |
+| v93.7 | `79b742d` | Master handoff document |
+| v94.0 | `92bebb0` | S21 clean structure merge |
+| v94.1 | `369c866` | S21 brain — deploy/market/health/sleep/wake/learn |
 
 ## 🎯 NEXT STEPS
 
