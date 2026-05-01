@@ -933,9 +933,12 @@ if __name__ == '__main__':
     # Start threat monitor
     threading.Thread(target=threat_monitor, daemon=True).start()
     
-    # If no TTY (background/daemon), skip interactive loop and just sleep
-    if not sys.stdin.isatty():
-        print("[OMNI] Background mode. Server running. Sleeping forever.")
+    # If no TTY (background/daemon) OR --server flag, skip interactive loop
+    server_only = len(sys.argv) > 1 and sys.argv[1] in ('--server', 'server', '--daemon', 'daemon')
+    no_tty = not sys.stdin.isatty()
+    
+    if server_only or no_tty:
+        print("[OMNI] Background/server mode. HTTP API running on port 7777.")
         while True:
             time.sleep(3600)
     
