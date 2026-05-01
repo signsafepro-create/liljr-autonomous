@@ -28,6 +28,7 @@ echo "✅ Latest pulled"
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
 cp FUTURE_DEMO.md ~/FUTURE_DEMO.md
+cp liljr_ultimate_demo.py ~/liljr_ultimate_demo.py
 cp liljr_exo_consciousness.py ~/liljr_exo_consciousness.py
 cp install_phone_os.sh ~/install_phone_os.sh
 cp liljr_phone_os.py ~/liljr_phone_os.py
@@ -172,5 +173,16 @@ echo "   🧠 Immortal mind: Background"
 echo "   🌐 Server: Auto-start"
 echo ""
 echo "   SAY 'Junior' ANYTIME. I'M ALWAYS HERE."
+echo ""
+echo "══════════════════════════════════════════════════"
+echo "  🎉 RUNNING ULTIMATE DEMO"
+echo "  Testing all 13 systems..."
+echo "══════════════════════════════════════════════════"
+echo ""
+python3 ~/liljr_ultimate_demo.py
+echo ""
+echo "══════════════════════════════════════════════════"
+echo "  PHONE OS BOOT"
+echo "══════════════════════════════════════════════════"
 echo ""
 python3 ~/liljr_phone_os.py
