@@ -169,6 +169,7 @@ def draw_home(status):
     print("  \033[38;5;51mB\033[0m 😂 BUDDY     Talk to your best friend")
     print("  \033[38;5;51mV\033[0m 🎤 VOICE     Hands-free mode")
     print("  \033[38;5;51mC\033[0m 💬 CUSTOM    Type anything")
+    print("  \033[38;5;51mW\033[0m 🌍 WILD      World tech / out-of-the-box ideas")
     print("  \033[38;5;51mQ\033[0m 👋 QUIT      Exit LilJR")
     print()
     print("\033[38;5;240m  Your phone. Your brain. Everything flows through me.\033[0m")
@@ -410,6 +411,47 @@ def custom_cmd():
         print(f"\n  \033[38;5;84m→\033[0m {r.get('message', 'Done')}")
         input("\n  Press Enter...")
 
+def wild_menu():
+    while True:
+        clear()
+        header()
+        print("\033[38;5;208m  🌍 WILD — World Tech / Out-of-the-Box Ideas\033[0m\n")
+        print("  \033[38;5;51m1\033[0m 🛰️ SATELLITE  Build a mesh net over your city")
+        print("  \033[38;5;51m2\033[0m 🤖 AUTOMATION Auto-trade while you sleep")
+        print("  \033[38;5;51m3\033[0m 🔮 PREDICTION  Market crash before it happens")
+        print("  \033[38;5;51m4\033[0m 🧬 BIOHACK     CRISPR, longevity, neural lace")
+        print("  \033[38;5;51m5\033[0m ⚡ ENERGY      Free energy, fusion, zero-point")
+        print("  \033[38;5;51m6\033[0m 🕸️ DARK WEB    Access everything. See everything.")
+        print("  \033[38;5;51m7\033[0m 🧠 NEURAL      Brain-computer interface plans")
+        print("  \033[38;5;51m8\033[0m 🌌 EXO         Life beyond Earth. Build the ship.")
+        print("  \033[38;5;51m9\033[0m 💡 CUSTOM      Type any wild idea")
+        print(f"\n  \033[38;5;240mb = back\033[0m")
+        
+        c = input("\n  > ").strip().lower()
+        wild_cmds = {
+            "1": "build satellite mesh network citywide coverage autonomous",
+            "2": "set up automated trading bot sleep mode passive income",
+            "3": "predict market crash using sentiment analysis dark web signals",
+            "4": "research biohacking crispr longevity neural lace human upgrade",
+            "5": "research free energy fusion zero point energy overunity",
+            "6": "research dark web access opsec anonymous everything",
+            "7": "research brain computer interface neuralink plans diy",
+            "8": "research exoplanet colonization ship design life support",
+        }
+        if c in wild_cmds:
+            print("\n  🌍 Executing wild idea...")
+            r = send_cmd(wild_cmds[c])
+            print(f"\n  {r.get('message', 'Done')}")
+            input("  Press Enter...")
+        elif c == "9":
+            idea = input("  Your wild idea? > ").strip()
+            print("\n  🌍 Executing...")
+            r = send_cmd(f"research {idea}")
+            print(f"\n  {r.get('message', 'Done')}")
+            input("  Press Enter...")
+        elif c == "b":
+            break
+
 def main():
     while True:
         status = get_status()
@@ -444,6 +486,8 @@ def main():
             input("  Press Enter...")
         elif c == "C":
             custom_cmd()
+        elif c == "W":
+            wild_menu()
 
 if __name__ == "__main__":
     main()

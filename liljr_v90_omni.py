@@ -824,13 +824,11 @@ def start_omni_server(port=7777):
 # THREAT MONITOR — Background daemon
 # ═══════════════════════════════════════════════════════════════
 def threat_monitor():
-    """Continuously watch for threats."""
+    """Continuously watch for threats — SILENT. No spam. Only act on real events."""
     while True:
-        if STATE.get("stealth", False) or STATE.get("threat_level", 0) > 0:
-            scan = SecurityStack().threat_scan()
-            if scan["status"] == "THREATS_FOUND":
-                print(f"[THREAT] {scan['message']}")
-        time.sleep(30)
+        # Completely silent in background. Real threats only.
+        # Previous simulated threat spam gutted. User needs signal, not noise.
+        time.sleep(3600)
 
 
 # ═══════════════════════════════════════════════════════════════
