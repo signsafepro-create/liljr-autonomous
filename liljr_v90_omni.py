@@ -896,7 +896,7 @@ def text_loop():
             if "camera" in text.lower() and "watch" in text.lower():
                 VisionEngine().start_live_watch()
                 
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             break
     
     print("\n[OMNI] Still alive. Still watching. Still everything.")
@@ -932,6 +932,12 @@ if __name__ == '__main__':
     
     # Start threat monitor
     threading.Thread(target=threat_monitor, daemon=True).start()
+    
+    # If no TTY (background/daemon), skip interactive loop and just sleep
+    if not sys.stdin.isatty():
+        print("[OMNI] Background mode. Server running. Sleeping forever.")
+        while True:
+            time.sleep(3600)
     
     # Mode
     if len(sys.argv) > 1 and sys.argv[1] == 'voice':
