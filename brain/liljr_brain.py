@@ -93,7 +93,6 @@ class LilJrBrain:
         """Anything else → the brain learns it"""
         self.epoch += 1
         
-        # Store as knowledge
         key = text[:40].lower().strip().replace(" ", "_")
         self.data["knowledge"][key] = {
             "input": text,
@@ -102,7 +101,6 @@ class LilJrBrain:
             "learned": True
         }
         
-        # Log conversation
         self.data["conversations"].append({
             "epoch": self.epoch,
             "time": str(datetime.now()),
@@ -112,7 +110,6 @@ class LilJrBrain:
         
         self.save()
         
-        # Generate response
         responses = [
             f"[EPOCH-{self.epoch}] Learned: {text[:60]}...",
             f"[EPOCH-{self.epoch}] Noted. Stored in memory.",
@@ -143,18 +140,18 @@ class LilJrBrain:
         if c == "wake":
             return self.wake()
         
-        # Anything else → learn
         return self.learn(cmd)
 
 def main():
     brain = LilJrBrain()
     print(f"\n{'='*50}")
-    print(f" LIL JR 2.0 — S21 AUTONOMOUS BRAIN")
+    print(f" 🧬 LIL JR 2.0 — S21 AUTONOMOUS BRAIN")
     print(f" Device: {brain.data.get('device', 'S21')}")
     print(f" Epoch: {brain.epoch} | Status: {brain.status}")
     print(f"{'='*50}\n")
-    print(" Commands: deploy | market | health | sleep | wake")
-    print(" Anything else → I learn it\n")
+    print(" COMMANDS: deploy | market | health | sleep | wake")
+    print(" Anything else → I learn it")
+    print("\n Type 'exit' or press Ctrl+C to return to S21 shell\n")
     
     while True:
         try:

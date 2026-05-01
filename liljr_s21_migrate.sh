@@ -100,26 +100,36 @@ export PATH="$LILJR_HOME/scripts:$PATH"
 export LILJR_MODE="autonomous"
 export LILJR_DEVICE="S21"
 export LILJR_STATUS="awake"
-export PS1="[LIL-JR:\w]$ "
+export PS1="[S21-SHELL:\w]$ "
 cd $LILJR_HOME 2>/dev/null
+echo ""
+echo "=== S21 SHELL === Type 'liljr-start' to enter the brain ==="
+echo ""
 EOF
 
 # === SYSTEM STARTER ===
 echo "[S21] Installing starter commands..."
 cat > ~/liljr-system/scripts/liljr-start << 'SHEOF'
 #!/bin/bash
-echo "=== LIL JR 2.0 SYSTEM BOOT ==="
-source ~/.bashrc.liljr 2>/dev/null
+echo ""
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║                                                            ║"
+echo "║          🧬 ENTERING LIL JR BRAIN                         ║"
+echo "║                                                            ║"
+echo "║     You are now INSIDE the brain.                          ║"
+echo "║     Type: deploy | market | health | sleep | wake         ║"
+echo "║     Anything else → I learn it                              ║"
+echo "║                                                            ║"
+echo "║     Press Ctrl+C or type 'exit' to return to S21 shell    ║"
+echo "║                                                            ║"
+echo "╚════════════════════════════════════════════════════════════╝"
+echo ""
 cd ~/liljr-system
-# Start API server in background
-if ! curl -s --max-time 1 http://localhost:7777/api/omni/status >/dev/null 2>&1; then
-    echo "[BOOT] Starting API server..."
-    python3 api/server.py > logs/api.log 2>&1 &
-    sleep 2
-fi
-# Start brain
 python3 brain/liljr_brain.py
-SHEOF
+echo ""
+echo "=== BRAIN EXITED — Back to S21 shell ==="
+echo "Type 'liljr-start' to re-enter"
+echo ""
 chmod +x ~/liljr-system/scripts/liljr-start
 
 cat > ~/liljr-system/scripts/liljr-chat << 'SHEOF'
