@@ -27,6 +27,8 @@ echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
+cp FUTURE_DEMO.md ~/FUTURE_DEMO.md
+cp liljr_exo_consciousness.py ~/liljr_exo_consciousness.py
 cp install_phone_os.sh ~/install_phone_os.sh
 cp liljr_phone_os.py ~/liljr_phone_os.py
 cp liljr_motherboard.py ~/liljr_motherboard.py
