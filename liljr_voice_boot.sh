@@ -1,6 +1,8 @@
 #!/bin/bash
-# liljr_voice_boot.sh — LILJR LIVES. Voice-first. Your phone IS him.
+# liljr_voice_boot.sh — v92.5 COMPLETE
+# LILJR LIVES. Voice-first. Your phone IS him.
 # One command. He wakes up. He speaks. He listens. He executes.
+# APPS | PHONE | MONEY | SECURITY | RESEARCH | LEGAL | CODE | VISION | BUDDY | WORLD
 
 cd ~/liljr-autonomous
 
@@ -20,14 +22,17 @@ sleep 1
 echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║                                                            ║"
-echo "║              🧬 LILJR — WAKING UP                          ║"
+echo "║              🧬 LILJR v92.5 — COMPLETE                     ║"
 echo "║                                                            ║"
 echo "║         Your phone. Your voice. Your command.              ║"
+echo "║                                                            ║"
+echo "║    APPS • PHONE • MONEY • SECURITY • RESEARCH • LEGAL     ║"
+echo "║    CODE • VISION • BUDDY • WORLD • THINK AHEAD             ║"
 echo "║                                                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# START OMNI brain (server-only, no crash)
+# START OMNI brain
 echo "[1/3] Booting OMNI brain..."
 python3 liljr_v90_omni.py --server > ~/liljr_omni.log 2>&1 &
 OMNI_PID=$!
@@ -54,15 +59,21 @@ echo ""
 echo "[3/3] LILJR IS ALIVE."
 echo ""
 echo "    Say: 'Wake up' or 'Hey Junior'"
-echo "    He'll speak back. He'll execute."
-echo "    He IS your phone."
 echo ""
-echo "    'Open camera' → Camera opens"
-echo "    'Buy AAPL 10' → Trade executes"
-echo "    'What's the weather' → He tells you"
-echo "    'Go stealth' → Stealth active"
-echo "    'Research nuclear fusion' → Deep dive"
-echo "    'Tell me a joke' → He roasts you"
+echo "    EXAMPLES:"
+echo "    • 'Open camera' → Camera opens"
+echo "    • 'Buy AAPL 10' → Trade executes"
+echo "    • 'What's the weather' → Live weather"
+echo "    • 'Go stealth' → Invisible mode"
+echo "    • 'Research quantum computing' → Deep dive"
+echo "    • 'Write code for a web scraper' → File created"
+echo "    • 'Diagnose my phone' → System health"
+echo "    • 'Protect me' → Full lockdown"
+echo "    • 'Tell me a joke' → He roasts you"
+echo "    • 'What's the news' → Headlines"
+echo "    • 'Price BTC' → Live crypto"
+echo "    • 'Take a photo' → Photo captured"
+echo "    • 'Status report' → Full system state"
 echo ""
 echo "    Say 'sleep' or 'quiet' when done."
 echo "    He'll watch everything in the dark."
