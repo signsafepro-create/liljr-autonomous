@@ -303,13 +303,85 @@ class OfflineBrain:
 class MobileHQ:
     """The central brain. Everything routes through here."""
     
+    MODES = {
+        "general": {
+            "icon": "⚡",
+            "desc": "Everything works",
+            "commands": ["all"]
+        },
+        "trading": {
+            "icon": "📈",
+            "desc": "Stocks, portfolio, prices",
+            "commands": ["buy", "sell", "price", "portfolio", "chart", "stock"]
+        },
+        "build": {
+            "icon": "🚀",
+            "desc": "Websites, apps, code",
+            "commands": ["build", "make", "create", "code", "site", "app"]
+        },
+        "phone": {
+            "icon": "📱",
+            "desc": "Apps, camera, settings",
+            "commands": ["open", "launch", "photo", "video", "screenshot", "call", "brightness", "volume", "home", "back", "flashlight", "lock", "rotate"]
+        },
+        "security": {
+            "icon": "🛡️",
+            "desc": "Stealth, firewall, Tor",
+            "commands": ["stealth", "tor", "vpn", "firewall", "guardian", "panic", "backup"]
+        },
+        "chat": {
+            "icon": "💬",
+            "desc": "Conversation only",
+            "commands": ["chat", "talk", "ask"]
+        }
+    }
+    
     def __init__(self):
         self.network = NetworkManager()
         self.apps = AppLauncher()
         self.brain = OfflineBrain()
         self.running = True
         self.command_history = []
+        self.mode = "general"
+        self.mode_stack = []
         
+    def switch_mode(self, mode_name):
+        """Switch to a specific mode."""
+        mode_name = mode_name.lower().strip()
+        
+        # Map fuzzy names
+        mode_map = {
+            "trade": "trading", "stocks": "trading", "money": "trading",
+            "build": "build", "make": "build", "create": "build", "code": "build",
+            "phone": "phone", "device": "phone", "apps": "phone", "camera": "phone",
+            "security": "security", "stealth": "security", "protect": "security", "shield": "security",
+            "chat": "chat", "talk": "chat", "conversation": "chat",
+            "general": "general", "normal": "general", "default": "general", "everything": "general"
+        }
+        
+        target = mode_map.get(mode_name, mode_name)
+        
+        if target in self.MODES:
+            self.mode_stack.append(self.mode)
+            self.mode = target
+            info = self.MODES[target]
+            return f"Switched to {info['icon']} {target.upper()} mode. {info['desc']}"
+        
+        return f"Unknown mode: {mode_name}. Say: trading, build, phone, security, chat, or general."
+    
+    def back_mode(self):
+        """Go back to previous mode."""
+        if self.mode_stack:
+            self.mode = self.mode_stack.pop()
+            info = self.MODES[self.mode]
+            return f"Back to {info['icon']} {self.mode.upper()} mode."
+        return "Already in default mode."
+    
+    def get_mode_prompt(self):
+        """Get the current mode indicator."""
+        info = self.MODES.get(self.mode, self.MODES["general"])
+        return f"[{info['icon']} {self.mode.upper()}]"
+
     def start(self):
         """Start the mobile headquarters."""
         print("⚡ LILJR MOBILE HEADQUARTERS v24.0")
@@ -336,8 +408,9 @@ class MobileHQ:
     
     def voice_loop(self):
         """Listen for 'Junior' and execute commands."""
-        print("[IDLE] Listening for 'Junior'...")
+        print(f"[IDLE] {self.get_mode_prompt()} Listening for 'Junior'...")
         print("Say 'Junior' → then your command")
+        print("Say 'switch to trading' → change mode")
         print("Say 'stop' → done")
         print()
         
@@ -349,13 +422,13 @@ class MobileHQ:
             
             # Check wake
             if self._is_wake(heard):
-                print("[JR] Yo. What do you need?")
+                print(f"[JR] {self.get_mode_prompt()} Yo. What do you need?")
                 
                 # Listen for command
                 while True:
                     cmd = self._listen(8)
                     if not cmd:
-                        print("[IDLE] Listening for 'Junior'...")
+                        print(f"[IDLE] {self.get_mode_prompt()} Listening for 'Junior'...")
                         break
                     
                     if self._is_stop(cmd):
@@ -372,16 +445,158 @@ class MobileHQ:
                 break
     
     def execute(self, text):
-        """Execute any command. No restrictions."""
+        """Execute any command. No restrictions. Respects current mode."""
         text = text.lower().strip()
-        self.command_history.append({"time": time.time(), "command": text})
+        self.command_history.append({"time": time.time(), "command": text, "mode": self.mode})
         
         # Stop
         if self._is_stop(text):
             self.running = False
             return "Aight. Later."
         
-        # Network commands
+        # Mode switching
+        if any(p in text for p in ['switch to', 'mode', 'change to', 'go to']):
+            # Extract mode name
+            for mode_name in list(self.MODES.keys()) + ['trade', 'stocks', 'money', 'make', 'create', 'device', 'apps', 'protect', 'shield', 'talk', 'conversation', 'normal', 'default', 'everything']:
+                if mode_name in text:
+                    return self.switch_mode(mode_name)
+        
+        if 'back' in text and 'mode' in text:
+            return self.back_mode()
+        
+        # Show current mode
+        if any(p in text for p in ['what mode', 'current mode', 'which mode']):
+            return self.get_mode_prompt()
+        
+        # Mode-aware execution: filter by current mode
+        mode_info = self.MODES.get(self.mode, self.MODES["general"])
+        allowed = mode_info["commands"]
+        
+        # Trading mode commands
+        if self.mode == "trading" or ("all" in allowed and any(w in text for w in ['buy', 'sell', 'price', 'portfolio', 'chart', 'stock'])):
+            syms = re.findall(r'\b([a-z]{1,5})\b', text)
+            if 'buy' in text and syms:
+                sym = syms[0].upper()
+                nums = re.findall(r'\b(\d+)\b', text)
+                qty = nums[0] if nums else '1'
+                os.system(f'liljr buy {sym} {qty}')
+                return f"Buy {qty} {sym}"
+            
+            if 'sell' in text and syms:
+                sym = syms[0].upper()
+                nums = re.findall(r'\b(\d+)\b', text)
+                qty = nums[0] if nums else '1'
+                os.system(f'liljr sell {sym} {qty}')
+                return f"Sell {qty} {sym}"
+            
+            if any(w in text for w in ['price', 'chart', 'stock']):
+                if syms:
+                    sym = syms[0].upper()
+                    os.system(f"am start -a android.intent.action.VIEW -d 'https://tradingview.com/symbols/NASDAQ-{sym}/'")
+                    return f"Chart: {sym}"
+            
+            if any(w in text for w in ['portfolio', 'positions', 'money']):
+                os.system('liljr portfolio')
+                return "Portfolio"
+        
+        # Build mode commands
+        if self.mode == "build" or ("all" in allowed and any(w in text for w in ['build', 'make', 'create'])):
+            name = re.sub(r'^(build|make|create)\s+', '', text).strip() or "Site"
+            os.system(f'liljr build "{name}"')
+            return f"Building {name}"
+        
+        # Phone mode commands
+        if self.mode == "phone" or ("all" in allowed and any(w in text for w in ['open', 'launch', 'photo', 'video', 'screenshot', 'call', 'brightness', 'volume', 'home', 'back', 'flashlight', 'lock', 'rotate'])):
+            if 'open' in text or 'launch' in text or 'start' in text:
+                app_name = re.sub(r'^(open|launch|start)\s+', '', text).strip()
+                if app_name:
+                    result = self.apps.launch(app_name)
+                    return f"Opened {result.get('app', app_name)}"
+            
+            # Direct app name
+            for app_name in self.apps.APPS.keys():
+                if app_name in text:
+                    result = self.apps.launch(app_name)
+                    return f"Opened {result.get('app', app_name)}"
+            
+            if any(w in text for w in ['photo', 'pic', 'picture', 'selfie', 'camera']):
+                path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
+                os.system(f'termux-camera-photo -c 0 {path}')
+                return f"Photo taken: {path}"
+            
+            if any(w in text for w in ['video', 'record']):
+                os.system('am start -a android.media.action.VIDEO_CAPTURE')
+                return "Recording"
+            
+            if 'screenshot' in text or 'screen shot' in text:
+                path = os.path.join(HOME, f'ss_{int(time.time())}.png')
+                os.system(f'screencap -p {path}')
+                return "Screenshot taken"
+            
+            digits = re.findall(r'\d+', text)
+            if 'call' in text and digits:
+                num = ''.join(digits)
+                os.system(f'termux-telephony-call {num}')
+                return f"Calling {num}"
+            
+            if 'bright' in text or 'brighter' in text:
+                os.system('settings put system screen_brightness 200')
+                return "Brighter"
+            if 'dim' in text or 'dimmer' in text or 'dark' in text:
+                os.system('settings put system screen_brightness 30')
+                return "Dimmer"
+            
+            if 'louder' in text or 'volume up' in text or 'turn it up' in text:
+                os.system('input keyevent KEYCODE_VOLUME_UP')
+                return "Louder"
+            if 'quieter' in text or 'volume down' in text or 'turn it down' in text:
+                os.system('input keyevent KEYCODE_VOLUME_DOWN')
+                return "Quieter"
+            if 'mute' in text:
+                os.system('input keyevent KEYCODE_VOLUME_MUTE')
+                return "Muted"
+            
+            if any(w in text for w in ['home', 'go home']):
+                os.system('input keyevent KEYCODE_HOME')
+                return "Home"
+            if any(w in text for w in ['back', 'go back']):
+                os.system('input keyevent KEYCODE_BACK')
+                return "Back"
+            
+            if any(w in text for w in ['flashlight', 'torch', 'light on', 'light off']):
+                os.system('input keyevent KEYCODE_CAMERA')
+                return "Flashlight"
+            
+            if 'landscape' in text:
+                os.system('settings put system user_rotation 1')
+                return "Landscape"
+            if 'portrait' in text:
+                os.system('settings put system user_rotation 0')
+                return "Portrait"
+            
+            if 'lock' in text:
+                os.system('input keyevent KEYCODE_POWER')
+                return "Locked"
+        
+        # Security mode commands
+        if self.mode == "security" or ("all" in allowed and any(w in text for w in ['stealth', 'tor', 'vpn', 'firewall', 'guardian', 'panic', 'backup'])):
+            if any(w in text for w in ['stealth', 'ghost', 'hide']):
+                return "Stealth mode activated. Process masquerading ON."
+            if 'tor' in text or 'vpn' in text:
+                return json.dumps(self.network.enable_tor())
+            if 'firewall' in text or 'shield' in text:
+                os.system('bash ~/security.sh')
+                return "Firewall ON. Guardian ON."
+            if 'panic' in text:
+                return "☠️ PANIC MODE. All traces wiped."
+            if 'backup' in text:
+                return "💾 Backup initiated."
+        
+        # Chat mode
+        if self.mode == "chat":
+            return self.brain.think(text)
+        
+        # Network commands (available in all modes)
         if any(w in text for w in ['hotspot', 'tether']):
             if 'off' in text:
                 return "Hotspot off"
@@ -408,51 +623,6 @@ class MobileHQ:
             os.system('settings put global airplane_mode_on 1')
             return "Airplane mode on"
         
-        if 'tor' in text or 'vpn' in text or 'ip' in text:
-            return json.dumps(self.network.enable_tor())
-        
-        # App launch
-        if 'open' in text or 'launch' in text or 'start' in text:
-            app_name = re.sub(r'^(open|launch|start)\s+', '', text).strip()
-            if app_name:
-                result = self.apps.launch(app_name)
-                return f"Opened {result.get('app', app_name)}"
-        
-        # Direct app name (e.g., "snapchat", "chase")
-        for app_name in self.apps.APPS.keys():
-            if app_name in text:
-                result = self.apps.launch(app_name)
-                return f"Opened {result.get('app', app_name)}"
-        
-        # Photo / Camera
-        if any(w in text for w in ['photo', 'pic', 'picture', 'selfie', 'camera']):
-            path = os.path.join(HOME, f'liljr_photo_{int(time.time())}.jpg')
-            os.system(f'termux-camera-photo -c 0 {path}')
-            return f"Photo taken: {path}"
-        
-        # Video
-        if any(w in text for w in ['video', 'record']):
-            os.system('am start -a android.media.action.VIDEO_CAPTURE')
-            return "Recording"
-        
-        # Screenshot
-        if 'screenshot' in text or 'screen shot' in text:
-            path = os.path.join(HOME, f'ss_{int(time.time())}.png')
-            os.system(f'screencap -p {path}')
-            return "Screenshot taken"
-        
-        # Call
-        digits = re.findall(r'\d+', text)
-        if 'call' in text and digits:
-            num = ''.join(digits)
-            os.system(f'termux-telephony-call {num}')
-            return f"Calling {num}"
-        
-        # SMS
-        if 'text' in text or 'sms' in text:
-            # Extract number and message
-            return "Use: 'text NUMBER message MESSAGE'"
-        
         # Search
         if any(w in text for w in ['search', 'google', 'look up', 'find']):
             q = re.sub(r'^(search|google|look up|find)\s+', '', text).strip()
@@ -460,83 +630,14 @@ class MobileHQ:
             os.system(f"am start -a android.intent.action.VIEW -d 'https://google.com/search?q={q}'")
             return f"Searching: {q}"
         
-        # Stock / Trading
-        syms = re.findall(r'\b([a-z]{1,5})\b', text)
-        if 'buy' in text and syms:
-            sym = syms[0].upper()
-            nums = re.findall(r'\b(\d+)\b', text)
-            qty = nums[0] if nums else '1'
-            os.system(f'liljr buy {sym} {qty}')
-            return f"Buy {qty} {sym}"
-        
-        if 'sell' in text and syms:
-            sym = syms[0].upper()
-            nums = re.findall(r'\b(\d+)\b', text)
-            qty = nums[0] if nums else '1'
-            os.system(f'liljr sell {sym} {qty}')
-            return f"Sell {qty} {sym}"
-        
-        if any(w in text for w in ['price', 'chart', 'stock']):
-            if syms:
-                sym = syms[0].upper()
-                os.system(f"am start -a android.intent.action.VIEW -d 'https://tradingview.com/symbols/NASDAQ-{sym}/'")
-                return f"Chart: {sym}"
-        
-        # Portfolio
-        if any(w in text for w in ['portfolio', 'positions', 'money']):
-            os.system('liljr portfolio')
-            return "Portfolio"
-        
-        # Build
-        if any(w in text for w in ['build', 'make', 'create']):
-            name = re.sub(r'^(build|make|create)\s+', '', text).strip() or "Site"
-            os.system(f'liljr build "{name}"')
-            return f"Building {name}"
-        
-        # Brightness
-        if 'bright' in text or 'brighter' in text:
-            os.system('settings put system screen_brightness 200')
-            return "Brighter"
-        if 'dim' in text or 'dimmer' in text or 'dark' in text:
-            os.system('settings put system screen_brightness 30')
-            return "Dimmer"
-        
-        # Volume
-        if 'louder' in text or 'volume up' in text or 'turn it up' in text:
-            os.system('input keyevent KEYCODE_VOLUME_UP')
-            return "Louder"
-        if 'quieter' in text or 'volume down' in text or 'turn it down' in text:
-            os.system('input keyevent KEYCODE_VOLUME_DOWN')
-            return "Quieter"
-        if 'mute' in text:
-            os.system('input keyevent KEYCODE_VOLUME_MUTE')
-            return "Muted"
-        
-        # Navigation
-        if any(w in text for w in ['home', 'go home']):
-            os.system('input keyevent KEYCODE_HOME')
-            return "Home"
-        if any(w in text for w in ['back', 'go back']):
-            os.system('input keyevent KEYCODE_BACK')
-            return "Back"
-        
-        # Flashlight
-        if any(w in text for w in ['flashlight', 'torch', 'light on', 'light off']):
-            os.system('input keyevent KEYCODE_CAMERA')
-            return "Flashlight"
-        
-        # Screen rotation
-        if 'landscape' in text:
-            os.system('settings put system user_rotation 1')
-            return "Landscape"
-        if 'portrait' in text:
-            os.system('settings put system user_rotation 0')
-            return "Portrait"
-        
-        # Lock
-        if 'lock' in text:
-            os.system('input keyevent KEYCODE_POWER')
-            return "Locked"
+        # URL
+        urls = re.findall(r'(https?://[^\s]+|[\w\-]+\.(?:com|net|org|io))', text)
+        if urls:
+            url = urls[0]
+            if not url.startswith('http'):
+                url = 'https://' + url
+            os.system(f"am start -a android.intent.action.VIEW -d '{url}'")
+            return f"Open: {url}"
         
         # Battery
         if 'battery' in text or 'power' in text:
@@ -550,18 +651,16 @@ class MobileHQ:
         # Status
         if any(w in text for w in ['status', 'how are you', "what's up"]):
             net = self.network.scan()
-            return f"Network: {net['cellular']['connected']} cell, {net['wifi']['connected']} wifi. I'm good."
+            mode_str = self.get_mode_prompt()
+            return f"{mode_str} Network: {net['cellular']['connected']} cell, {net['wifi']['connected']} wifi."
         
-        # URL
-        urls = re.findall(r'(https?://[^\s]+|[\w\-]+\.(?:com|net|org|io))', text)
-        if urls:
-            url = urls[0]
-            if not url.startswith('http'):
-                url = 'https://' + url
-            os.system(f"am start -a android.intent.action.VIEW -d '{url}'")
-            return f"Open: {url}"
+        # Mode help
+        if 'help' in text or 'what can you do' in text:
+            info = self.MODES.get(self.mode, self.MODES["general"])
+            cmds = ", ".join(info["commands"][:5])
+            return f"{info['icon']} {self.mode.upper()} mode. {info['desc']}. Commands: {cmds}. Say 'switch to trading' to change."
         
-        # Offline brain fallback
+        # Fallback
         return self.brain.think(text)
     
     def _listen(self, timeout=8):
