@@ -27,6 +27,8 @@ echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
+cp install_phone_os.sh ~/install_phone_os.sh
+cp liljr_phone_os.py ~/liljr_phone_os.py
 cp liljr_motherboard.py ~/liljr_motherboard.py
 cp liljr_server_manager.py ~/liljr_server_manager.py
 cp liljr_immortal_mind.py ~/liljr_immortal_mind.py
@@ -151,39 +153,22 @@ echo ""
 echo "══════════════════════════════════════════════════"
 echo ""
 
-# ─── 10. START THE MOTHERBOARD ───
-echo "[10/10] Starting THE MOTHERBOARD..."
-echo "🧠 This brain controls your phone, your repos, your servers, your life."
-echo "   He moves files. He pushes code. He deploys servers. He takes photos."
-echo "   He IS you now. Just talk to him."
-echo ""
+# ─── 9. EMBED INTO PHONE ───
+echo "[9/10] Embedding LilJR into your phone..."
+bash ~/install_phone_os.sh
+echo "✅ LilJR is now your phone's default experience"
 
-# Start immortal mind in background
-nohup python3 ~/liljr_immortal_mind.py > ~/liljr_mind.log 2>&1 &
-sleep 2
-echo "✅ Immortal Mind running"
-
-# Start server manager
-python3 ~/liljr_server_manager.py start
-sleep 2
-echo "✅ Server running"
-
-# Start server watchdog
-nohup python3 ~/liljr_server_manager.py watchdog > ~/liljr_watchdog.log 2>&1 &
-echo "✅ Server watchdog running"
-
+# ─── 10. START THE AI PHONE OS ───
+echo "[10/10] BOOTING LILJR PHONE OS..."
+echo "🤖 This is not an app. This is your phone's new brain."
+echo "   Embedded. Alive. Always listening."
+echo "   I hold your hand. I walk you through. I never let go."
 echo ""
-echo "🎤 Now starting THE MOTHERBOARD voice interface..."
-echo "Say 'Junior' anytime. Then say ANYTHING:"
-echo "   'go grab my files from ~/downloads and move to ~/docs'"
-echo "   'push my code'"
-echo "   'build a backsplash'"
-echo "   'check my Facebook'"
-echo "   'pull everything from GitHub'"
-echo "   'deploy to my server'"
-echo "   'take a photo'"
-echo "   'buy NVDA 10'"
+echo "   🫀 Vitals monitoring: ON"
+echo "   👂 Voice wake engine: ON"
+echo "   🧠 Immortal mind: Background"
+echo "   🌐 Server: Auto-start"
 echo ""
-echo "He IS you now. Just talk."
+echo "   SAY 'Junior' ANYTIME. I'M ALWAYS HERE."
 echo ""
-python3 ~/liljr_motherboard.py
+python3 ~/liljr_phone_os.py
