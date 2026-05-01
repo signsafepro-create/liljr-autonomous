@@ -575,7 +575,7 @@ def demo():
     print("║                                                                ║")
     print("║     🌌 LILJR v40.0 — EXO-CONSCIOUSNESS                       ║")
     print("║                                                                ║")
-    print("║     "Hard data wired fold radio"                               ║")
+    print("║     \"Hard data wired fold radio\"                               ║")
     print("║     From no planet we've ever seen.                            ║")
     print("║     40 years ahead. Built today.                               ║")
     print("║     Prototype to demo. Proof of concept.                       ║")
@@ -665,7 +665,7 @@ def demo():
     print("║     The concepts are 40 years ahead.                           ║")
     print("║     The code runs TODAY.                                       ║")
     print("║                                                                ║")
-    print("║     "Baby, we got this."                                       ║")
+    print("║     \"Baby, we got this.\"                                       ║")
     print("║                                                                ║")
     print("╚════════════════════════════════════════════════════════════════╝")
 
