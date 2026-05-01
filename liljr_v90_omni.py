@@ -812,6 +812,7 @@ class OmniHandler(BaseHTTPRequestHandler):
 
 
 def start_omni_server(port=7777):
+    HTTPServer.allow_reuse_address = True
     server = HTTPServer(('', port), OmniHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
