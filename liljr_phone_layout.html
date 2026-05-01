@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>LilJR</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{background:#0a0a0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding:16px;padding-bottom:120px;-webkit-font-smoothing:antialiased}
+.status-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:16px}
+.brand{font-size:22px;font-weight:800;background:linear-gradient(90deg,#00d4ff,#ff00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
+.pulse-dot{width:10px;height:10px;border-radius:50%;background:#00ff88;box-shadow:0 0 12px #00ff88;animation:pulse 2s infinite}
+@keyframes pulse{0%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}100%{opacity:1;transform:scale(1)}}
+.card{background:#141428;border-radius:20px;padding:20px;margin-bottom:16px;border:1px solid #1e1e3a;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:12px}
+.big-value{font-size:42px;font-weight:800;letter-spacing:-1px;margin-bottom:4px}
+.big-value.green{color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,.3)}
+.big-value.blue{color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,.3)}
+.big-value.pink{color:#ff00ff;text-shadow:0 0 20px rgba(255,0,255,.3)}
+.sub{font-size:13px;color:#666}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.btn{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1a3a;border-radius:20px;padding:24px 16px;border:1px solid #252545;cursor:pointer;transition:all .15s;min-height:120px}
+.btn:active{transform:scale(.96);background:#252550}
+.btn-icon{font-size:36px;margin-bottom:10px}
+.btn-label{font-size:14px;font-weight:600;text-align:center}
+.btn-sub{font-size:11px;color:#666;margin-top:4px;text-align:center}
+.btn.full{grid-column:1/-1;flex-direction:row;justify-content:flex-start;padding:20px 24px;gap:16px;min-height:auto}
+.btn.full .btn-icon{margin-bottom:0}
+.btn.full .btn-text{flex:1;text-align:left}
+.btn.full .btn-sub{text-align:left}
+.voice-btn{background:linear-gradient(135deg,#1a3a1a,#0d280d);border-color:#2a5a2a}
+.voice-btn:active{background:linear-gradient(135deg,#1f4a1f,#0d280d)}
+.camera-btn{background:linear-gradient(135deg,#3a1a1a,#280d0d);border-color:#5a2a2a}
+.camera-btn:active{background:linear-gradient(135deg,#4a1f1f,#280d0d)}
+.money-btn{background:linear-gradient(135deg,#1a1a3a,#0d0d28);border-color:#2a2a5a}
+.money-btn:active{background:linear-gradient(135deg,#1f1f4a,#0d0d28)}
+.danger-btn{background:linear-gradient(135deg,#3a1a3a,#280d28);border-color:#5a2a5a}
+.danger-btn:active{background:linear-gradient(135deg,#4a1f4a,#280d28)}
+.log{font-family:'SF Mono',monospace;font-size:11px;color:#444;line-height:1.6;max-height:200px;overflow-y:auto;padding:8px;background:#0d0d1a;border-radius:12px;margin-top:12px}
+.log-line{margin-bottom:4px}
+.log-time{color:#333;font-size:10px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0a0a0f;border-top:1px solid #1e1e3a;padding:12px 16px 24px;display:flex;justify-content:space-around;z-index:100}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:#666;font-size:10px;cursor:pointer}
+.nav-btn.active{color:#00d4ff}
+.nav-btn:active{opacity:.7}
+.nav-icon{font-size:22px}
+.hidden{display:none}
+.input-area{position:fixed;bottom:80px;left:16px;right:16px;z-index:99}
+.input-bar{display:flex;gap:8px;background:#141428;border:1px solid #1e1e3a;border-radius:24px;padding:4px;padding-left:16px}
+.input-bar input{flex:1;background:none;border:none;color:#fff;font-size:16px;padding:12px 0;outline:none}
+.input-bar button{background:#00d4ff;color:#0a0a0f;border:none;border-radius:20px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer}
+.input-bar button:active{opacity:.8}
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+<div class="brand">LilJR</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:11px;color:#666">LIVE</span>
+<div class="pulse-dot"></div>
+</div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="dashboard">
+<div class="card">
+<div class="card-title">Cash Position</div>
+<div class="big-value green" id="cash">$999,506</div>
+<div class="sub" id="positions">1 position active</div>
+</div>
+
+<div class="grid">
+<div class="btn voice-btn" onclick="sendCmd('voice on')">
+<div class="btn-icon">🎤</div>
+<div class="btn-label">Voice Mode</div>
+<div class="btn-sub">Talk to LilJR</div>
+</div>
+<div class="btn camera-btn" onclick="sendCmd('camera live')">
+<div class="btn-icon">📷</div>
+<div class="btn-label">Live Camera</div>
+<div class="btn-sub">Watch me work</div>
+</div>
+<div class="btn money-btn" onclick="showPage('money')">
+<div class="btn-icon">💰</div>
+<div class="btn-label">Money</div>
+<div class="btn-sub">Trade & Portfolio</div>
+</div>
+<div class="btn" onclick="showPage('ops')">
+<div class="btn-icon">🛡️</div>
+<div class="btn-label">Security</div>
+<div class="btn-sub">Stealth & VPN</div>
+</div>
+<div class="btn" onclick="sendCmd('organize my phone')">
+<div class="btn-icon">🗂️</div>
+<div class="btn-label">Organize</div>
+<div class="btn-sub">Clean & Sync</div>
+</div>
+<div class="btn" onclick="sendCmd('status')">
+<div class="btn-icon">📊</div>
+<div class="btn-label">Status</div>
+<div class="btn-sub">Full Report</div>
+</div>
+</div>
+
+<div class="btn full" onclick="showPage('research')">
+<div class="btn-icon">🔬</div>
+<div class="btn-text">
+<div class="btn-label">Deep Research</div>
+<div class="btn-sub">Quantum, Nuclear, Dark Web, Law, AI</div>
+</div>
+</div>
+
+<div class="btn full" onclick="showPage('legal')">
+<div class="btn-icon">⚖️</div>
+<div class="btn-text">
+<div class="btn-label">Legal Mind</div>
+<div class="btn-sub">Defense paths, Case law, Strategy</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">System Log</div>
+<div class="log" id="log">
+<div class="log-line"><span class="log-time">12:00</span> OMNI activated</div>
+<div class="log-line"><span class="log-time">12:00</span> Server running on port 7777</div>
+<div class="log-line"><span class="log-time">12:00</span> Threat monitor armed</div>
+</div>
+</div>
+</div>
+
+<!-- MONEY PAGE -->
+<div id="money" class="hidden">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+<div onclick="showPage('dashboard')" style="font-size:24px;cursor:pointer">←</div>
+<div class="brand">Money</div>
+</div>
+<div class="card">
+<div class="big-value green" id="money-cash">$999,506</div>
+<div class="sub">Available cash</div>
+</div>
+<div class="grid">
+<div class="btn money-btn" onclick="sendCmd('buy AAPL 10')">
+<div class="btn-icon">📈</div>
+<div class="btn-label">Buy AAPL</div>
+</div>
+<div class="btn money-btn" onclick="sendCmd('buy TSLA 5')">
+<div class="btn-icon">⚡</div>
+<div class="btn-label">Buy TSLA</div>
+</div>
+<div class="btn money-btn" onclick="sendCmd('buy NVDA 2')">
+<div class="btn-icon">🤖</div>
+<div class="btn-label">Buy NVDA</div>
+</div>
+<div class="btn money-btn" onclick="sendCmd('buy BTC 0.1')">
+<div class="btn-icon">₿</div>
+<div class="btn-label">Buy BTC</div>
+</div>
+<div class="btn danger-btn" onclick="sendCmd('sell all')">
+<div class="btn-icon">💸</div>
+<div class="btn-label">Sell All</div>
+</div>
+<div class="btn" onclick="sendCmd('portfolio')">
+<div class="btn-icon">📋</div>
+<div class="btn-label">Portfolio</div>
+</div>
+</div>
+</div>
+
+<!-- OPS PAGE -->
+<div id="ops" class="hidden">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+<div onclick="showPage('dashboard')" style="font-size:24px;cursor:pointer">←</div>
+<div class="brand">Security</div>
+</div>
+<div class="grid">
+<div class="btn danger-btn" onclick="sendCmd('go stealth')">
+<div class="btn-icon">👻</div>
+<div class="btn-label">Stealth On</div>
+</div>
+<div class="btn danger-btn" onclick="sendCmd('stealth off')">
+<div class="btn-icon">👁️</div>
+<div class="btn-label">Stealth Off</div>
+</div>
+<div class="btn" onclick="sendCmd('start VPN')">
+<div class="btn-icon">🔒</div>
+<div class="btn-label">VPN On</div>
+</div>
+<div class="btn" onclick="sendCmd('VPN off')">
+<div class="btn-icon">🔓</div>
+<div class="btn-label">VPN Off</div>
+</div>
+<div class="btn money-btn" onclick="sendCmd('protect me')">
+<div class="btn-icon">🛡️</div>
+<div class="btn-label">Full Lockdown</div>
+</div>
+<div class="btn" onclick="sendCmd('threat scan')">
+<div class="btn-icon">🔍</div>
+<div class="btn-label">Scan Threats</div>
+</div>
+</div>
+</div>
+
+<!-- RESEARCH PAGE -->
+<div id="research" class="hidden">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+<div onclick="showPage('dashboard')" style="font-size:24px;cursor:pointer">←</div>
+<div class="brand">Research</div>
+</div>
+<div class="grid">
+<div class="btn" onclick="sendCmd('research quantum computing')">
+<div class="btn-icon">⚛️</div>
+<div class="btn-label">Quantum</div>
+</div>
+<div class="btn" onclick="sendCmd('research nuclear fusion')">
+<div class="btn-icon">☢️</div>
+<div class="btn-label">Nuclear</div>
+</div>
+<div class="btn" onclick="sendCmd('research dark web')">
+<div class="btn-icon">🕸️</div>
+<div class="btn-label">Dark Web</div>
+</div>
+<div class="btn" onclick="sendCmd('research AI AGI timeline')">
+<div class="btn-icon">🧠</div>
+<div class="btn-label">AI / AGI</div>
+</div>
+<div class="btn" onclick="sendCmd('research crypto markets')">
+<div class="btn-icon">🪙</div>
+<div class="btn-label">Crypto</div>
+</div>
+<div class="btn" onclick="sendCmd('research biotech CRISPR')">
+<div class="btn-icon">🧬</div>
+<div class="btn-label">Biotech</div>
+</div>
+<div class="btn" onclick="sendCmd('research space Mars mission')">
+<div class="btn-icon">🚀</div>
+<div class="btn-label">Space</div>
+</div>
+<div class="btn" onclick="sendCmd('research legal tech AI')">
+<div class="btn-icon">⚖️</div>
+<div class="btn-label">Legal Tech</div>
+</div>
+</div>
+</div>
+
+<!-- LEGAL PAGE -->
+<div id="legal" class="hidden">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+<div onclick="showPage('dashboard')" style="font-size:24px;cursor:pointer">←</div>
+<div class="brand">Legal</div>
+</div>
+<div class="grid">
+<div class="btn" onclick="sendCmd('legal defense DUI')">
+<div class="btn-icon">🚗</div>
+<div class="btn-label">DUI Defense</div>
+</div>
+<div class="btn" onclick="sendCmd('legal contract breach')">
+<div class="btn-icon">📄</div>
+<div class="btn-label">Contract</div>
+</div>
+<div class="btn" onclick="sendCmd('legal intellectual property')">
+<div class="btn-icon">💡</div>
+<div class="btn-label">IP / Patent</div>
+</div>
+<div class="btn" onclick="sendCmd('legal criminal defense')">
+<div class="btn-icon">🔒</div>
+<div class="btn-label">Criminal</div>
+</div>
+<div class="btn" onclick="sendCmd('legal family custody')">
+<div class="btn-icon">👨‍👩‍👧</div>
+<div class="btn-label">Family</div>
+</div>
+<div class="btn" onclick="sendCmd('legal case analysis')">
+<div class="btn-icon">🔍</div>
+<div class="btn-label">Case Analysis</div>
+</div>
+</div>
+</div>
+
+<!-- TEXT INPUT -->
+<div class="input-area">
+<div class="input-bar">
+<input type="text" id="cmdInput" placeholder="Say anything..." onkeydown="if(event.key==='Enter'){sendText()}">
+<button onclick="sendText()">→</button>
+</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+<div class="nav-btn active" onclick="showPage('dashboard')">
+<div class="nav-icon">🏠</div>
+<div>Home</div>
+</div>
+<div class="nav-btn" onclick="showPage('money')">
+<div class="nav-icon">💰</div>
+<div>Money</div>
+</div>
+<div class="nav-btn" onclick="sendCmd('voice on')">
+<div class="nav-icon">🎤</div>
+<div>Voice</div>
+</div>
+<div class="nav-btn" onclick="showPage('research')">
+<div class="nav-icon">🔬</div>
+<div>Research</div>
+</div>
+<div class="nav-btn" onclick="showPage('ops')">
+<div class="nav-icon">🛡️</div>
+<div>Security</div>
+</div>
+</div>
+
+<script>
+const API = 'http://localhost:7777/api/omni/command';
+let logCount = 0;
+
+function showPage(page) {
+document.querySelectorAll('#dashboard, #money, #ops, #research, #legal').forEach(el => el.classList.add('hidden'));
+document.getElementById(page).classList.remove('hidden');
+document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+// Update active nav
+const navMap = {dashboard:0, money:1, research:3, ops:4};
+if(navMap[page] !== undefined) document.querySelectorAll('.nav-btn')[navMap[page]].classList.add('active');
+}
+
+function sendCmd(cmd) {
+addLog('> ' + cmd);
+fetch(API, {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({command:cmd})
+})
+.then(r => r.json())
+.then(d => {
+if(d.message) addLog(d.message);
+if(d.cash !== undefined) document.getElementById('cash').textContent = '$' + Math.round(d.cash).toLocaleString();
+})
+.catch(e => addLog('LilJR offline. Start OMNI first.'));
+}
+
+function sendText() {
+const input = document.getElementById('cmdInput');
+const cmd = input.value.trim();
+if(!cmd) return;
+sendCmd(cmd);
+input.value = '';
+}
+
+function addLog(text) {
+const log = document.getElementById('log');
+const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const line = document.createElement('div');
+line.className = 'log-line';
+line.innerHTML = `<span class="log-time">${time}</span> ${text}`;
+log.insertBefore(line, log.firstChild);
+if(log.children.length > 50) log.removeChild(log.lastChild);
+}
+
+// Auto-refresh status every 5s
+setInterval(() => {
+fetch('http://localhost:7777/api/omni/status', {cache:'no-store'})
+.then(r => r.json())
+.then(d => {
+if(d.cash !== undefined) document.getElementById('cash').textContent = '$' + Math.round(d.cash).toLocaleString();
+})
+.catch(()=>{});
+}, 5000);
+
+// Welcome
+addLog('Phone layout loaded. Tap any button.');
+</script>
+</body>
+</html>
