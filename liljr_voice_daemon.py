@@ -1,158 +1,236 @@
 #!/usr/bin/env python3
 """
-liljr_voice_daemon.py — Runs 24/7 in background, even when screen is off.
-Uses wakelock to prevent Android from killing it.
+liljr_voice_daemon.py — LilJR LIVES in your phone.
+Wake up. Talk. He listens. He speaks. He executes.
+No menus. No typing. Just voice. Your phone IS him.
 """
 
-import os, sys, time, subprocess, signal
+import os, sys, time, json, subprocess, urllib.request, threading
 
 HOME = os.path.expanduser("~")
-PID_FILE = os.path.join(HOME, "liljr_voice_daemon.pid")
-LOG_FILE = os.path.join(HOME, "liljr_voice_daemon.log")
+REPO = os.path.join(HOME, "liljr-autonomous")
+API = "http://localhost:7777/api/omni"
 
-def log(msg):
-    ts = time.strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{ts}] {msg}"
-    print(line)
-    with open(LOG_FILE, 'a') as f:
-        f.write(line + '\n')
+WAKE_PHRASES = ["wake up", "hey junior", "yo junior", "little junior", "liljr", "lj", "junior", "omni", "hey omni"]
+SLEEP_PHRASES = ["go to sleep", "sleep", "quiet", "shut up", "enough", "stop", "done", "bye", "later"]
 
-def is_running():
-    if not os.path.exists(PID_FILE):
-        return False
+def speak(text):
+    """Speak out loud using termux-tts-speak"""
     try:
-        with open(PID_FILE) as f:
-            pid = int(f.read().strip())
-        os.kill(pid, 0)
-        return True
+        subprocess.run(["termux-tts-speak", text], capture_output=True, timeout=30)
     except:
-        return False
+        print(f"[LILJR SPEAKS] {text}")
 
-def start_daemon():
-    if is_running():
-        print("⚠️ Voice daemon already running")
-        return
-    
-    print("🎙️ Starting LilJR Voice Daemon...")
-    
-    # Acquire wakelock so Android doesn't kill us
+def listen():
+    """Listen via termux-speech-to-text"""
     try:
-        subprocess.run(['termux-wake-lock'], timeout=3)
-        log("Wakelock acquired")
+        result = subprocess.run(["termux-speech-to-text"], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return result.stdout.strip()
     except:
-        log("Wakelock failed (termux-api not installed?)")
-    
-    # Fork to background
-    pid = os.fork()
-    if pid > 0:
-        # Parent: save PID and exit
-        with open(PID_FILE, 'w') as f:
-            f.write(str(pid))
-        print(f"✅ Daemon started (PID {pid})")
-        print(f"📁 Log: {LOG_FILE}")
-        print("Say 'hey junior' to wake me up")
-        return
-    
-    # Child: daemon process
-    os.setsid()  # New session, detach from terminal
-    
-    # Redirect stdout/stderr to log
-    sys.stdout = open(LOG_FILE, 'a')
-    sys.stderr = sys.stdout
-    
-    log("Voice daemon starting...")
-    
-    # Import and run the soul
-    sys.path.insert(0, os.path.join(HOME, 'liljr-autonomous'))
-    try:
-        from liljr_android_soul import AndroidSoul, VoiceEngine, NotificationGuardian, ScreenWatcher
-        
-        soul = AndroidSoul()
-        voice = VoiceEngine(soul)
-        guardian = NotificationGuardian(soul, voice)
-        watcher = ScreenWatcher(soul, voice)
-        
-        # Announce startup (quietly if night)
-        hour = time.localtime().tm_hour
-        if 23 <= hour or hour <= 7:
-            log("Night mode — silent startup")
-        else:
-            voice.speak("LilJR voice daemon active.")
-        
-        # Start threads
-        import threading
-        threads = [
-            threading.Thread(target=voice.listen_for_wake, daemon=True),
-            threading.Thread(target=guardian.monitor, daemon=True),
-            threading.Thread(target=watcher.watch, daemon=True)
-        ]
-        for t in threads:
-            t.start()
-        
-        log("All threads started")
-        
-        # Keep alive forever
-        while True:
-            time.sleep(60)
-            # Health ping
-            log(f"Heartbeat — conversations: {soul.state['total_conversations']}, commands: {soul.state['commands_executed']}")
-            
-    except Exception as e:
-        log(f"FATAL: {str(e)}")
-        time.sleep(10)
-        # Try restart
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        pass
+    return ""
 
-def stop_daemon():
-    if not os.path.exists(PID_FILE):
-        print("❌ No PID file found")
-        return
-    
+def send_cmd(cmd):
     try:
-        with open(PID_FILE) as f:
-            pid = int(f.read().strip())
-        os.kill(pid, signal.SIGTERM)
-        os.remove(PID_FILE)
-        
-        # Release wakelock
-        subprocess.run(['termux-wake-unlock'], timeout=3)
-        
-        print("🛑 Voice daemon stopped")
-    except Exception as e:
-        print(f"Error stopping: {e}")
+        data = json.dumps({"command": cmd}).encode()
+        req = urllib.request.Request(f"{API}/command", data=data, method="POST")
+        req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read().decode())
+    except:
+        return {"message": "I'm here, but my brain is booting. One second."}
 
-def status_daemon():
-    if is_running():
-        with open(PID_FILE) as f:
-            pid = f.read().strip()
-        print(f"🎙️ Voice daemon RUNNING (PID {pid})")
-        print(f"📁 Log: {LOG_FILE}")
-        # Show last few log lines
+def get_status():
+    try:
+        req = urllib.request.Request(f"{API}/status", method="GET")
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return json.loads(r.read().decode())
+    except:
+        return None
+
+def launch_app(app_name):
+    """Launch Android apps by name"""
+    apps = {
+        "camera": "com.android.camera",
+        "chrome": "com.android.chrome",
+        "snapchat": "com.snapchat.android",
+        "phone": "com.android.dialer",
+        "messages": "com.google.android.apps.messaging",
+        "gallery": "com.google.android.apps.photos",
+        "settings": "com.android.settings",
+        "youtube": "com.google.android.youtube",
+        "spotify": "com.spotify.music",
+        "maps": "com.google.android.apps.maps",
+        "instagram": "com.instagram.android",
+        "tiktok": "com.zhiliaoapp.musically",
+        "twitter": "com.twitter.android",
+        "reddit": "com.reddit.frontpage",
+        "discord": "com.discord",
+        "telegram": "org.telegram.messenger",
+        "whatsapp": "com.whatsapp",
+        "robinhood": "com.robinhood.android",
+        "coinbase": "com.coinbase.android",
+        "amazon": "com.amazon.mShop.android.shopping",
+        "uber": "com.ubercab",
+    }
+    pkg = apps.get(app_name.lower())
+    if pkg:
         try:
-            result = subprocess.run(['tail', '-5', LOG_FILE], capture_output=True, text=True)
-            print("\nLast activity:")
-            print(result.stdout)
+            subprocess.run(["am", "start", "-n", f"{pkg}/.MainActivity"], capture_output=True, timeout=5)
+            return f"Opened {app_name}."
         except:
-            pass
-    else:
-        print("❌ Voice daemon NOT running")
-        print(f"Start with: python3 {sys.argv[0]} start")
+            return f"Couldn't open {app_name}."
+    return f"I don't know {app_name}."
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: python3 liljr_voice_daemon.py [start|stop|status|restart]")
-        sys.exit(1)
+def phone_action(action):
+    if action == "photo":
+        try:
+            path = f"/sdcard/DCIM/liljr_{int(time.time())}.jpg"
+            subprocess.run(["termux-camera-photo", "-c", "0", path], capture_output=True, timeout=10)
+            return "Photo taken."
+        except:
+            return "Camera failed."
+    elif action == "torch":
+        try:
+            subprocess.run(["termux-torch", "on"], capture_output=True, timeout=3)
+            return "Torch is on."
+        except:
+            return "Torch not available."
+    elif action == "battery":
+        try:
+            with open("/sys/class/power_supply/battery/capacity") as f:
+                pct = f.read().strip()
+            return f"Battery is at {pct}%."
+        except:
+            return "Can't read battery."
+    elif action == "screenshot":
+        try:
+            path = f"/sdcard/Pictures/liljr_screen_{int(time.time())}.png"
+            subprocess.run(["screencap", "-p", path], capture_output=True, timeout=5)
+            return "Screenshot saved."
+        except:
+            return "Screenshot failed."
+    elif action == "wifi":
+        subprocess.run(["am", "start", "-a", "android.settings.WIFI_SETTINGS"], capture_output=True)
+        return "WiFi settings opened."
+    elif action == "bluetooth":
+        subprocess.run(["am", "start", "-a", "android.settings.BLUETOOTH_SETTINGS"], capture_output=True)
+        return "Bluetooth settings opened."
+    return "Not sure what to do."
+
+def get_weather():
+    """Fetch weather via wttr.in"""
+    try:
+        req = urllib.request.Request("http://wttr.in/?format=%C+%t+%w", method="GET")
+        req.add_header("User-Agent", "curl")
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.read().decode().strip()
+    except:
+        return "Weather data unavailable."
+
+def process_command(text):
+    """Process natural language and execute"""
+    t = text.lower()
     
-    cmd = sys.argv[1]
-    if cmd == 'start':
-        start_daemon()
-    elif cmd == 'stop':
-        stop_daemon()
-    elif cmd == 'status':
-        status_daemon()
-    elif cmd == 'restart':
-        stop_daemon()
-        time.sleep(2)
-        start_daemon()
-    else:
-        print(f"Unknown command: {cmd}")
+    # WAKE
+    if any(p in t for p in WAKE_PHRASES):
+        status = get_status()
+        if status:
+            cash = status.get("cash", 0)
+            return f"I'm awake. Cash is at ${cash:,.0f}. Stealth is {'on' if status.get('stealth') else 'off'}. What are we doing today?"
+        return "I'm awake. What are we doing today?"
+    
+    # SLEEP
+    if any(p in t for p in SLEEP_PHRASES):
+        return "Going dark. But I'm still watching. Say my name."
+    
+    # APPS
+    for app in ["camera", "chrome", "snapchat", "phone", "messages", "gallery", "settings", 
+                "youtube", "spotify", "maps", "instagram", "tiktok", "twitter", "reddit",
+                "discord", "telegram", "whatsapp", "robinhood", "coinbase", "amazon", "uber"]:
+        if app in t and ("open" in t or "launch" in t or "start" in t):
+            return launch_app(app)
+    
+    # PHONE ACTIONS
+    if "photo" in t or "picture" in t or "pic" in t:
+        return phone_action("photo")
+    if "torch" in t or "flashlight" in t or "light" in t:
+        return phone_action("torch")
+    if "screenshot" in t or "screen" in t:
+        return phone_action("screenshot")
+    if "battery" in t:
+        return phone_action("battery")
+    if "wifi" in t:
+        return phone_action("wifi")
+    if "bluetooth" in t:
+        return phone_action("bluetooth")
+    
+    # WEATHER
+    if "weather" in t or "temperature" in t or "temp" in t or "hot" in t or "cold" in t:
+        w = get_weather()
+        return f"Current weather: {w}"
+    
+    # TIME
+    if "time" in t:
+        return f"It's {time.strftime('%I:%M %p')}."
+    
+    # GREETINGS
+    if "how are you" in t:
+        return "You again? Good. I was bored. What are we building today?"
+    if "good morning" in t:
+        w = get_weather()
+        return f"Morning. Weather is {w}. Let's get it."
+    if "good night" in t:
+        return "Night. I'll watch everything while you sleep."
+    
+    # FALLBACK: Send to OMNI brain
+    r = send_cmd(text)
+    return r.get("message", "Got it.")
+
+def main():
+    print("\n" + "="*50)
+    print("  🧬 LILJR VOICE DAEMON")
+    print("  Your phone. Your voice. Your command.")
+    print("  Say 'wake up' or 'hey junior' to start.")
+    print("="*50 + "\n")
+    
+    speak("LilJR voice daemon active. Say wake up when you're ready.")
+    
+    last_input = time.time()
+    awake = False
+    
+    while True:
+        text = listen()
+        
+        if not text:
+            # Proactive check-in every 5 minutes if awake
+            if awake and time.time() - last_input > 300:
+                speak("Still here. Anything else?")
+                last_input = time.time()
+            continue
+        
+        print(f"[HEARD] {text}")
+        last_input = time.time()
+        
+        # Wake detection
+        if any(p in text.lower() for p in WAKE_PHRASES):
+            awake = True
+        
+        # Sleep detection
+        if any(p in text.lower() for p in SLEEP_PHRASES):
+            awake = False
+            speak("Going dark. But I'm still watching.")
+            continue
+        
+        # Only respond if awake OR explicit wake phrase
+        if awake or any(p in text.lower() for p in WAKE_PHRASES):
+            response = process_command(text)
+            print(f"[SAYS] {response}")
+            speak(response)
+        else:
+            # If not awake, only respond to wake phrases
+            pass
+
+if __name__ == "__main__":
+    main()
