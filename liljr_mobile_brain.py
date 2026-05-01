@@ -19,8 +19,20 @@ This is it. The final form.
 import os, sys, time, json, re, subprocess, threading, random, signal
 from datetime import datetime
 
+# Add repo to path for imports
+sys.path.insert(0, os.path.expanduser("~/liljr-autonomous"))
+
 HOME = os.path.expanduser("~")
 REPO = os.path.join(HOME, "liljr-autonomous")
+
+# Import the motherboard brain
+try:
+    from liljr_motherboard import Motherboard
+    MOTHERBOARD = Motherboard()
+    HAS_MOTHERBOARD = True
+except Exception as e:
+    MOTHERBOARD = None
+    HAS_MOTHERBOARD = False
 
 # ─── NETWORK MANAGER ───
 class NetworkManager:
@@ -445,7 +457,7 @@ class MobileHQ:
                 break
     
     def execute(self, text):
-        """Execute any command. No restrictions. Respects current mode."""
+        """Execute any command. No restrictions. Uses motherboard if available."""
         text = text.lower().strip()
         self.command_history.append({"time": time.time(), "command": text, "mode": self.mode})
         
@@ -467,6 +479,20 @@ class MobileHQ:
         # Show current mode
         if any(p in text for p in ['what mode', 'current mode', 'which mode']):
             return self.get_mode_prompt()
+        
+        # ─── USE MOTHERBOARD FOR FULL CONTROL ───
+        if HAS_MOTHERBOARD and MOTHERBOARD:
+            # Let the motherboard handle it — it knows phone, cloud, repos, everything
+            result = MOTHERBOARD.exec(text)
+            if isinstance(result, dict):
+                if result.get("status") == "unknown":
+                    # Motherboard didn't understand, fall through to local
+                    pass
+                else:
+                    # Format dict result nicely
+                    if result.get("status") in ["ok", "done", "building", "opened", "pushed", "deployed"]:
+                        return result.get("message", json.dumps(result))
+                    return result.get("message", str(result))
         
         # Mode-aware execution: filter by current mode
         mode_info = self.MODES.get(self.mode, self.MODES["general"])

@@ -27,6 +27,7 @@ echo "✅ Latest pulled"
 
 # ─── 3. COPY ALL FILES ───
 echo "[3/10] Copying mobile brain..."
+cp liljr_motherboard.py ~/liljr_motherboard.py
 cp liljr_server_manager.py ~/liljr_server_manager.py
 cp liljr_immortal_mind.py ~/liljr_immortal_mind.py
 cp liljr_mobile_brain.py ~/liljr_mobile_brain.py
@@ -150,21 +151,39 @@ echo ""
 echo "══════════════════════════════════════════════════"
 echo ""
 
-# ─── 10. START IMMORTAL MIND + MOBILE BRAIN ───
-echo "[10/10] Starting Immortal Mind..."
-echo "🧠 This brain never stops. It thinks, learns, builds, heals, watches."
-echo "   It will keep running even when you close this screen."
+# ─── 10. START THE MOTHERBOARD ───
+echo "[10/10] Starting THE MOTHERBOARD..."
+echo "🧠 This brain controls your phone, your repos, your servers, your life."
+echo "   He moves files. He pushes code. He deploys servers. He takes photos."
+echo "   He IS you now. Just talk to him."
 echo ""
 
-# Start immortal mind in background (no output, no TTY needed)
+# Start immortal mind in background
 nohup python3 ~/liljr_immortal_mind.py > ~/liljr_mind.log 2>&1 &
 sleep 2
-echo "✅ Immortal Mind running in background"
-echo "   Log: ~/liljr_mind.log"
-echo ""
+echo "✅ Immortal Mind running"
 
-echo "🎤 Now starting voice interface..."
-echo "Say 'Junior' anytime to wake me up."
-echo "Your phone IS the AI now."
+# Start server manager
+python3 ~/liljr_server_manager.py start
+sleep 2
+echo "✅ Server running"
+
+# Start server watchdog
+nohup python3 ~/liljr_server_manager.py watchdog > ~/liljr_watchdog.log 2>&1 &
+echo "✅ Server watchdog running"
+
 echo ""
-python3 ~/liljr_mobile_brain.py
+echo "🎤 Now starting THE MOTHERBOARD voice interface..."
+echo "Say 'Junior' anytime. Then say ANYTHING:"
+echo "   'go grab my files from ~/downloads and move to ~/docs'"
+echo "   'push my code'"
+echo "   'build a backsplash'"
+echo "   'check my Facebook'"
+echo "   'pull everything from GitHub'"
+echo "   'deploy to my server'"
+echo "   'take a photo'"
+echo "   'buy NVDA 10'"
+echo ""
+echo "He IS you now. Just talk."
+echo ""
+python3 ~/liljr_motherboard.py
